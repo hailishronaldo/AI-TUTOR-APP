@@ -1,7 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -10,7 +15,6 @@ const kPrimaryColor = Color(0xFFB366FF);
 const kAccentColor = Color(0xFFFF66B2);
 const kDarkGradient = [Color(0xFF1A0033), Color(0xFF2D0052), Color(0xFF1A0033)];
 const kOnboardingCompleteKey = 'onboarding_complete';
-const kSignedInKey = 'signed_in';
 
 const kAnimationFast = Duration(milliseconds: 200);
 const kAnimationNormal = Duration(milliseconds: 500);
@@ -49,8 +53,7 @@ class LaunchDecider extends StatelessWidget {
       return const OnboardingScreen();
     }
 
-    final bool isSignedIn = prefs.getBool(kSignedInKey) ?? false;
-    return isSignedIn ? const HomeScreen() : const AuthScreen();
+    return const AuthGate();
   }
 
   @override
@@ -62,6 +65,28 @@ class LaunchDecider extends StatelessWidget {
           return const _Splash();
         }
         return snapshot.data!;
+      },
+    );
+  }
+}
+
+// 🔒 AUTH GATE: Listens to FirebaseAuth to decide screen
+class AuthGate extends StatelessWidget {
+  const AuthGate({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _Splash();
+        }
+        final User? user = snapshot.data;
+        if (user == null) {
+          return const AuthScreen();
+        }
+        return const HomeScreen();
       },
     );
   }
@@ -92,11 +117,10 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   Future<void> _signOut(BuildContext context) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(kSignedInKey, false);
+    await FirebaseAuth.instance.signOut();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
-      MaterialPageRoute(builder: (_) => const AuthScreen()),
+      MaterialPageRoute(builder: (_) => const AuthGate()),
       (route) => false,
     );
   }
@@ -506,6 +530,7 @@ class _SignInFormState extends State<SignInForm> {
   bool _obscurePassword = true;
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -553,16 +578,42 @@ class _SignInFormState extends State<SignInForm> {
         const SizedBox(height: 28),
         GradientButton(
           label: 'Sign In',
-          onPressed: () async {
-            final SharedPreferences prefs =
-                await SharedPreferences.getInstance();
-            await prefs.setBool(kSignedInKey, true);
-            if (!mounted) return;
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
-          },
+          onPressed: _isLoading
+              ? () {}
+              : () async {
+                  final String email = _emailController.text.trim();
+                  final String password = _passwordController.text.trim();
+                  if (email.isEmpty || password.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Email and password required')),
+                    );
+                    return;
+                  }
+                  setState(() => _isLoading = true);
+                  try {
+                    await FirebaseAuth.instance.signInWithEmailAndPassword(
+                      email: email,
+                      password: password,
+                    );
+                    if (!mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      (route) => false,
+                    );
+                  } on FirebaseAuthException catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.message ?? 'Sign-in failed')),
+                    );
+                  } catch (_) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Unexpected error')),
+                    );
+                  } finally {
+                    if (mounted) setState(() => _isLoading = false);
+                  }
+                },
         ),
         const SizedBox(height: 24),
         const DividerWithText(label: 'Or continue with'),
@@ -588,6 +639,7 @@ class _SignUpFormState extends State<SignUpForm> {
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  bool _isLoading = false;
 
   @override
   void dispose() {
@@ -647,16 +699,53 @@ class _SignUpFormState extends State<SignUpForm> {
         const SizedBox(height: 32),
         GradientButton(
           label: 'Create Account',
-          onPressed: () async {
-            final SharedPreferences prefs =
-                await SharedPreferences.getInstance();
-            await prefs.setBool(kSignedInKey, true);
-            if (!mounted) return;
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
-          },
+          onPressed: _isLoading
+              ? () {}
+              : () async {
+                  final String name = _nameController.text.trim();
+                  final String email = _emailController.text.trim();
+                  final String password = _passwordController.text.trim();
+                  if (!_agreeToTerms) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Please agree to the terms')),
+                    );
+                    return;
+                  }
+                  if (email.isEmpty || password.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Email and password required')),
+                    );
+                    return;
+                  }
+                  setState(() => _isLoading = true);
+                  try {
+                    final credential = await FirebaseAuth.instance
+                        .createUserWithEmailAndPassword(
+                      email: email,
+                      password: password,
+                    );
+                    if (credential.user != null && name.isNotEmpty) {
+                      await credential.user!.updateDisplayName(name);
+                    }
+                    if (!mounted) return;
+                    Navigator.of(context).pushAndRemoveUntil(
+                      MaterialPageRoute(builder: (_) => const HomeScreen()),
+                      (route) => false,
+                    );
+                  } on FirebaseAuthException catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(e.message ?? 'Sign-up failed')),
+                    );
+                  } catch (_) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Unexpected error')),
+                    );
+                  } finally {
+                    if (mounted) setState(() => _isLoading = false);
+                  }
+                },
         ),
         const SizedBox(height: 24),
         const DividerWithText(label: 'Or sign up with'),
@@ -803,14 +892,32 @@ class SocialRow extends StatelessWidget {
           icon: Icons.g_mobiledata,
           label: 'Google',
           onPressed: () async {
-            final SharedPreferences prefs =
-                await SharedPreferences.getInstance();
-            await prefs.setBool(kSignedInKey, true);
-            if (!context.mounted) return;
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
+            try {
+              final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+              final GoogleSignInAuthentication? googleAuth =
+                  await googleUser?.authentication;
+              if (googleAuth == null) return;
+              final credential = GoogleAuthProvider.credential(
+                accessToken: googleAuth.accessToken,
+                idToken: googleAuth.idToken,
+              );
+              await FirebaseAuth.instance.signInWithCredential(credential);
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            } on FirebaseAuthException catch (e) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.message ?? 'Google sign-in failed')),
+              );
+            } catch (_) {
+              if (!context.mounted) return;
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Google sign-in error')),
+              );
+            }
           },
         ),
         const SizedBox(width: 16),
@@ -818,13 +925,8 @@ class SocialRow extends StatelessWidget {
           icon: Icons.phone,
           label: 'Phone',
           onPressed: () async {
-            final SharedPreferences prefs =
-                await SharedPreferences.getInstance();
-            await prefs.setBool(kSignedInKey, true);
-            if (!context.mounted) return;
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(content: Text('Phone sign-in not implemented')),
             );
           },
         ),
