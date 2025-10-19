@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart' as fb_auth;
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_sign_in/google_sign_in.dart';
+import 'services/user_service.dart';
 
-void main() {
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
   runApp(const MyApp());
 }
 
@@ -41,27 +48,45 @@ class MyApp extends StatelessWidget {
 class LaunchDecider extends StatelessWidget {
   const LaunchDecider({super.key});
 
-  Future<Widget> _getInitialScreen() async {
+  Future<bool> _isOnboardingComplete() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final bool isOnboardingComplete =
-        prefs.getBool(kOnboardingCompleteKey) ?? false;
-    if (!isOnboardingComplete) {
-      return const OnboardingScreen();
-    }
-
-    final bool isSignedIn = prefs.getBool(kSignedInKey) ?? false;
-    return isSignedIn ? const HomeScreen() : const AuthScreen();
+    return prefs.getBool(kOnboardingCompleteKey) ?? false;
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<Widget>(
-      future: _getInitialScreen(),
+    return FutureBuilder<bool>(
+      future: _isOnboardingComplete(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const _Splash();
         }
-        return snapshot.data!;
+        final bool onboardingDone = snapshot.data ?? false;
+        if (!onboardingDone) {
+          return const OnboardingScreen();
+        }
+        return const _AuthGate();
+      },
+    );
+  }
+}
+
+class _AuthGate extends StatelessWidget {
+  const _AuthGate();
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<fb_auth.User?>(
+      stream: fb_auth.FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const _Splash();
+        }
+        final user = snapshot.data;
+        if (user != null) {
+          return const HomeScreen();
+        }
+        return const AuthScreen();
       },
     );
   }
@@ -92,8 +117,7 @@ class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
 
   Future<void> _signOut(BuildContext context) async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(kSignedInKey, false);
+    await fb_auth.FirebaseAuth.instance.signOut();
     if (!context.mounted) return;
     Navigator.of(context).pushAndRemoveUntil(
       MaterialPageRoute(builder: (_) => const AuthScreen()),
@@ -192,7 +216,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await prefs.setBool(kOnboardingCompleteKey, true);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AuthScreen()),
+      MaterialPageRoute(builder: (_) => const LaunchDecider()),
     );
   }
 
@@ -353,6 +377,8 @@ class _DotsIndicator extends StatelessWidget {
 
 class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   bool isSignIn = true;
+  bool _loading = false;
+  String? _error;
   late final AnimationController _fadeController = AnimationController(
     vsync: this,
     duration: kAnimationSlow,
@@ -433,12 +459,34 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                           color: Colors.white70,
                         ),
                       ),
+                      if (_error != null) ...[
+                        const SizedBox(height: 12),
+                        Text(
+                          _error!,
+                          style: const TextStyle(color: Colors.redAccent),
+                        ),
+                      ],
+                      if (_loading) ...[
+                        const SizedBox(height: 24),
+                        const CircularProgressIndicator(color: kPrimaryColor),
+                        const SizedBox(height: 24),
+                      ],
                       const SizedBox(height: 40),
                       AnimatedSwitcher(
                         duration: kAnimationNormal,
                         child: isSignIn
-                            ? const SignInForm(key: ValueKey('SignIn'))
-                            : const SignUpForm(key: ValueKey('SignUp')),
+                            ? SignInForm(
+                                key: const ValueKey('SignIn'),
+                                onStart: () => setState(() { _loading = true; _error = null; }),
+                                onError: (e) => setState(() { _loading = false; _error = e; }),
+                                onSuccess: () => setState(() { _loading = false; }),
+                              )
+                            : SignUpForm(
+                                key: const ValueKey('SignUp'),
+                                onStart: () => setState(() { _loading = true; _error = null; }),
+                                onError: (e) => setState(() { _loading = false; _error = e; }),
+                                onSuccess: () => setState(() { _loading = false; }),
+                              ),
                       ),
                       const SizedBox(height: 24),
                       Row(
@@ -496,7 +544,11 @@ class AuthLogo extends StatelessWidget {
 
 // ✉️ SIGN IN FORM
 class SignInForm extends StatefulWidget {
-  const SignInForm({super.key});
+  final VoidCallback onStart;
+  final void Function(String message) onError;
+  final VoidCallback onSuccess;
+
+  const SignInForm({super.key, required this.onStart, required this.onError, required this.onSuccess});
 
   @override
   State<SignInForm> createState() => _SignInFormState();
@@ -554,20 +606,56 @@ class _SignInFormState extends State<SignInForm> {
         GradientButton(
           label: 'Sign In',
           onPressed: () async {
-            final SharedPreferences prefs =
-                await SharedPreferences.getInstance();
-            await prefs.setBool(kSignedInKey, true);
-            if (!mounted) return;
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
+            widget.onStart();
+            try {
+              final credential = await fb_auth.FirebaseAuth.instance
+                  .signInWithEmailAndPassword(
+                email: _emailController.text.trim(),
+                password: _passwordController.text,
+              );
+              await UserService().upsertUserProfile(credential.user!);
+              widget.onSuccess();
+              if (!mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            } on fb_auth.FirebaseAuthException catch (e) {
+              widget.onError(e.message ?? 'Authentication failed');
+            } catch (e) {
+              widget.onError('Unexpected error, please try again');
+            }
           },
         ),
         const SizedBox(height: 24),
         const DividerWithText(label: 'Or continue with'),
         const SizedBox(height: 24),
-        const SocialRow(),
+        SocialRow(
+          onGoogle: () async {
+            widget.onStart();
+            try {
+              final user = await UserService().signInWithGoogle();
+              if (user != null) {
+                await UserService().upsertUserProfile(user);
+                widget.onSuccess();
+                if (!mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
+              } else {
+                widget.onError('Google sign-in cancelled');
+              }
+            } on fb_auth.FirebaseAuthException catch (e) {
+              widget.onError(e.message ?? 'Google sign-in failed');
+            } catch (e) {
+              widget.onError('Unexpected error during Google sign-in');
+            }
+          },
+          onPhone: () {
+            widget.onError('Phone sign-in not implemented in this demo');
+          },
+        ),
       ],
     );
   }
@@ -575,7 +663,11 @@ class _SignInFormState extends State<SignInForm> {
 
 // 🧾 SIGN UP FORM
 class SignUpForm extends StatefulWidget {
-  const SignUpForm({super.key});
+  final VoidCallback onStart;
+  final void Function(String message) onError;
+  final VoidCallback onSuccess;
+
+  const SignUpForm({super.key, required this.onStart, required this.onError, required this.onSuccess});
 
   @override
   State<SignUpForm> createState() => _SignUpFormState();
@@ -648,20 +740,57 @@ class _SignUpFormState extends State<SignUpForm> {
         GradientButton(
           label: 'Create Account',
           onPressed: () async {
-            final SharedPreferences prefs =
-                await SharedPreferences.getInstance();
-            await prefs.setBool(kSignedInKey, true);
-            if (!mounted) return;
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
+            widget.onStart();
+            try {
+              final credential = await fb_auth.FirebaseAuth.instance
+                  .createUserWithEmailAndPassword(
+                email: _emailController.text.trim(),
+                password: _passwordController.text,
+              );
+              await credential.user!.updateDisplayName(_nameController.text.trim());
+              await UserService().upsertUserProfile(credential.user!);
+              widget.onSuccess();
+              if (!mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            } on fb_auth.FirebaseAuthException catch (e) {
+              widget.onError(e.message ?? 'Sign up failed');
+            } catch (e) {
+              widget.onError('Unexpected error, please try again');
+            }
           },
         ),
         const SizedBox(height: 24),
         const DividerWithText(label: 'Or sign up with'),
         const SizedBox(height: 24),
-        const SocialRow(),
+        SocialRow(
+          onGoogle: () async {
+            widget.onStart();
+            try {
+              final user = await UserService().signInWithGoogle();
+              if (user != null) {
+                await UserService().upsertUserProfile(user);
+                widget.onSuccess();
+                if (!mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
+              } else {
+                widget.onError('Google sign-in cancelled');
+              }
+            } on fb_auth.FirebaseAuthException catch (e) {
+              widget.onError(e.message ?? 'Google sign-in failed');
+            } catch (e) {
+              widget.onError('Unexpected error during Google sign-in');
+            }
+          },
+          onPhone: () {
+            widget.onError('Phone sign-in not implemented in this demo');
+          },
+        ),
       ],
     );
   }
@@ -792,7 +921,9 @@ class _GradientButtonState extends State<GradientButton>
 
 // 🌐 SOCIAL BUTTONS ROW
 class SocialRow extends StatelessWidget {
-  const SocialRow({super.key});
+  final Future<void> Function()? onGoogle;
+  final VoidCallback? onPhone;
+  const SocialRow({super.key, this.onGoogle, this.onPhone});
 
   @override
   Widget build(BuildContext context) {
@@ -802,31 +933,13 @@ class SocialRow extends StatelessWidget {
         SocialButton(
           icon: Icons.g_mobiledata,
           label: 'Google',
-          onPressed: () async {
-            final SharedPreferences prefs =
-                await SharedPreferences.getInstance();
-            await prefs.setBool(kSignedInKey, true);
-            if (!context.mounted) return;
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
-          },
+          onPressed: onGoogle,
         ),
         const SizedBox(width: 16),
         SocialButton(
           icon: Icons.phone,
           label: 'Phone',
-          onPressed: () async {
-            final SharedPreferences prefs =
-                await SharedPreferences.getInstance();
-            await prefs.setBool(kSignedInKey, true);
-            if (!context.mounted) return;
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
-          },
+          onPressed: onPhone,
         ),
       ],
     );
@@ -836,7 +949,7 @@ class SocialRow extends StatelessWidget {
 class SocialButton extends StatefulWidget {
   final IconData icon;
   final String label;
-  final VoidCallback? onPressed;
+  final Future<void> Function()? onPressed;
 
   const SocialButton({
     super.key,
@@ -871,7 +984,7 @@ class _SocialButtonState extends State<SocialButton> {
               : Colors.transparent,
         ),
         child: InkWell(
-          onTap: widget.onPressed,
+          onTap: () async { if (widget.onPressed != null) await widget.onPressed!(); },
           borderRadius: BorderRadius.circular(12),
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
