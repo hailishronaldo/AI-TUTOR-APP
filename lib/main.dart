@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   runApp(const MyApp());
@@ -8,6 +9,7 @@ void main() {
 const kPrimaryColor = Color(0xFFB366FF);
 const kAccentColor = Color(0xFFFF66B2);
 const kDarkGradient = [Color(0xFF1A0033), Color(0xFF2D0052), Color(0xFF1A0033)];
+const kOnboardingCompleteKey = 'onboarding_complete';
 
 const kAnimationFast = Duration(milliseconds: 200);
 const kAnimationNormal = Duration(milliseconds: 500);
@@ -30,7 +32,51 @@ class MyApp extends StatelessWidget {
         ),
         fontFamily: 'Inter',
       ),
-      home: const AuthScreen(),
+      home: const LaunchDecider(),
+    );
+  }
+}
+
+class LaunchDecider extends StatelessWidget {
+  const LaunchDecider({super.key});
+
+  Future<bool> _shouldShowOnboarding() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final bool isComplete = prefs.getBool(kOnboardingCompleteKey) ?? false;
+    return !isComplete;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _shouldShowOnboarding(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const _Splash();
+        }
+        final bool showOnboarding = snapshot.data ?? true;
+        return showOnboarding ? const OnboardingScreen() : const AuthScreen();
+      },
+    );
+  }
+}
+
+class _Splash extends StatelessWidget {
+  const _Splash();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: kDarkGradient,
+        ),
+      ),
+      child: const Center(
+        child: CircularProgressIndicator(color: kPrimaryColor),
+      ),
     );
   }
 }
@@ -40,6 +86,200 @@ class AuthScreen extends StatefulWidget {
 
   @override
   State<AuthScreen> createState() => _AuthScreenState();
+}
+
+// 🧭 ONBOARDING
+class OnboardingScreen extends StatefulWidget {
+  const OnboardingScreen({super.key});
+
+  @override
+  State<OnboardingScreen> createState() => _OnboardingScreenState();
+}
+
+class _OnboardingScreenState extends State<OnboardingScreen> {
+  final PageController _pageController = PageController();
+  int _currentPage = 0;
+
+  final List<_OnboardingPageModel> _pages = const [
+    _OnboardingPageModel(
+      icon: Icons.explore,
+      title: 'Welcome to Smooth Auth',
+      subtitle: 'A delightful, animated experience to sign in or sign up.',
+    ),
+    _OnboardingPageModel(
+      icon: Icons.security,
+      title: 'Secure By Default',
+      subtitle: 'Modern UI with best practices for privacy and safety.',
+    ),
+    _OnboardingPageModel(
+      icon: Icons.rocket_launch,
+      title: 'Get Started Quickly',
+      subtitle: 'Create your account in seconds and enjoy the journey.',
+    ),
+  ];
+
+  Future<void> _completeOnboarding() async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kOnboardingCompleteKey, true);
+    if (!mounted) return;
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const AuthScreen()),
+    );
+  }
+
+  void _goNext() {
+    if (_currentPage == _pages.length - 1) {
+      _completeOnboarding();
+    } else {
+      _pageController.nextPage(
+        duration: kAnimationNormal,
+        curve: Curves.easeOut,
+      );
+    }
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    final bool isLast = _currentPage == _pages.length - 1;
+
+    return Scaffold(
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: kDarkGradient,
+          ),
+        ),
+        child: SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 20),
+            child: Column(
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    TextButton(
+                      onPressed: _completeOnboarding,
+                      child: const Text(
+                        'Skip',
+                        style: TextStyle(color: Colors.white70),
+                      ),
+                    ),
+                  ],
+                ),
+                Expanded(
+                  child: PageView.builder(
+                    controller: _pageController,
+                    itemCount: _pages.length,
+                    onPageChanged: (index) => setState(() => _currentPage = index),
+                    itemBuilder: (context, index) {
+                      final page = _pages[index];
+                      return _OnboardingPage(page: page);
+                    },
+                  ),
+                ),
+                const SizedBox(height: 8),
+                _DotsIndicator(
+                  count: _pages.length,
+                  index: _currentPage,
+                ),
+                const SizedBox(height: 20),
+                GradientButton(
+                  label: isLast ? 'Get Started' : 'Next',
+                  onPressed: _goNext,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingPageModel {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _OnboardingPageModel({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+}
+
+class _OnboardingPage extends StatelessWidget {
+  final _OnboardingPageModel page;
+  const _OnboardingPage({required this.page});
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Container(
+          width: 120,
+          height: 120,
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(colors: [kPrimaryColor, kAccentColor]),
+          ),
+          child: Icon(page.icon, color: Colors.white, size: 64),
+        ),
+        const SizedBox(height: 32),
+        Text(
+          page.title,
+          textAlign: TextAlign.center,
+          style: textTheme.headlineSmall?.copyWith(
+            fontWeight: FontWeight.bold,
+            color: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 12),
+        Text(
+          page.subtitle,
+          textAlign: TextAlign.center,
+          style: textTheme.bodyMedium?.copyWith(color: Colors.white70),
+        ),
+      ],
+    );
+  }
+}
+
+class _DotsIndicator extends StatelessWidget {
+  final int count;
+  final int index;
+  const _DotsIndicator({required this.count, required this.index});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: List.generate(count, (i) {
+        final bool active = i == index;
+        return AnimatedContainer(
+          duration: kAnimationFast,
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          height: 8,
+          width: active ? 20 : 8,
+          decoration: BoxDecoration(
+            color: active ? kPrimaryColor : Colors.white24,
+            borderRadius: BorderRadius.circular(8),
+          ),
+        );
+      }),
+    );
+  }
 }
 
 class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
