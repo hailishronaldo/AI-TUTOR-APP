@@ -195,19 +195,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   final List<_OnboardingPageModel> _pages = const [
     _OnboardingPageModel(
-      icon: Icons.explore,
-      title: 'Welcome to Smooth Auth',
-      subtitle: 'A delightful, animated experience to sign in or sign up.',
+      icon: Icons.psychology_alt,
+      title: 'AI Tutor for Everyone',
+      subtitle: 'Personalized learning aligned with SDG 4: Quality Education.',
     ),
     _OnboardingPageModel(
-      icon: Icons.security,
-      title: 'Secure By Default',
-      subtitle: 'Modern UI with best practices for privacy and safety.',
+      icon: Icons.school,
+      title: 'Master Concepts Faster',
+      subtitle: 'Step-by-step explanations, quizzes, and real-time feedback.',
     ),
     _OnboardingPageModel(
-      icon: Icons.rocket_launch,
-      title: 'Get Started Quickly',
-      subtitle: 'Create your account in seconds and enjoy the journey.',
+      icon: Icons.auto_awesome,
+      title: 'Learn Anywhere, Anytime',
+      subtitle: 'Study on your schedule with progress tracking and insights.',
     ),
   ];
 
@@ -413,13 +413,7 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   @override
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
-
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: const Text('Auth'),
-        centerTitle: true,
-      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -892,28 +886,49 @@ class SocialRow extends StatelessWidget {
           icon: Icons.g_mobiledata,
           label: 'Google',
           onPressed: () async {
+            if (!context.mounted) return;
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const Center(
+                child: CircularProgressIndicator(color: kPrimaryColor),
+              ),
+            );
             try {
-              final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-              final GoogleSignInAuthentication? googleAuth =
-                  await googleUser?.authentication;
-              if (googleAuth == null) return;
+              final GoogleSignInAccount? googleUser =
+                  await GoogleSignIn().signIn();
+              if (googleUser == null) {
+                // User cancelled the picker
+                if (!context.mounted) return;
+                Navigator.of(context, rootNavigator: true).pop();
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Google sign-in was cancelled')),
+                );
+                return;
+              }
+
+              final GoogleSignInAuthentication googleAuth =
+                  await googleUser.authentication;
               final credential = GoogleAuthProvider.credential(
                 accessToken: googleAuth.accessToken,
                 idToken: googleAuth.idToken,
               );
               await FirebaseAuth.instance.signInWithCredential(credential);
               if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const HomeScreen()),
                 (route) => false,
               );
             } on FirebaseAuthException catch (e) {
               if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text(e.message ?? 'Google sign-in failed')),
               );
             } catch (_) {
               if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
               ScaffoldMessenger.of(context).showSnackBar(
                 const SnackBar(content: Text('Google sign-in error')),
               );
