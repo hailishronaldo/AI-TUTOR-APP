@@ -10,6 +10,7 @@ const kPrimaryColor = Color(0xFFB366FF);
 const kAccentColor = Color(0xFFFF66B2);
 const kDarkGradient = [Color(0xFF1A0033), Color(0xFF2D0052), Color(0xFF1A0033)];
 const kOnboardingCompleteKey = 'onboarding_complete';
+const kSignedInKey = 'signed_in';
 
 const kAnimationFast = Duration(milliseconds: 200);
 const kAnimationNormal = Duration(milliseconds: 500);
@@ -40,22 +41,27 @@ class MyApp extends StatelessWidget {
 class LaunchDecider extends StatelessWidget {
   const LaunchDecider({super.key});
 
-  Future<bool> _shouldShowOnboarding() async {
+  Future<Widget> _getInitialScreen() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final bool isComplete = prefs.getBool(kOnboardingCompleteKey) ?? false;
-    return !isComplete;
+    final bool isOnboardingComplete =
+        prefs.getBool(kOnboardingCompleteKey) ?? false;
+    if (!isOnboardingComplete) {
+      return const OnboardingScreen();
+    }
+
+    final bool isSignedIn = prefs.getBool(kSignedInKey) ?? false;
+    return isSignedIn ? const HomeScreen() : const AuthScreen();
   }
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _shouldShowOnboarding(),
+    return FutureBuilder<Widget>(
+      future: _getInitialScreen(),
       builder: (context, snapshot) {
         if (!snapshot.hasData) {
           return const _Splash();
         }
-        final bool showOnboarding = snapshot.data ?? true;
-        return showOnboarding ? const OnboardingScreen() : const AuthScreen();
+        return snapshot.data!;
       },
     );
   }
@@ -76,6 +82,69 @@ class _Splash extends StatelessWidget {
       ),
       child: const Center(
         child: CircularProgressIndicator(color: kPrimaryColor),
+      ),
+    );
+  }
+}
+
+// 🏠 HOME
+class HomeScreen extends StatelessWidget {
+  const HomeScreen({super.key});
+
+  Future<void> _signOut(BuildContext context) async {
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(kSignedInKey, false);
+    if (!context.mounted) return;
+    Navigator.of(context).pushAndRemoveUntil(
+      MaterialPageRoute(builder: (_) => const AuthScreen()),
+      (route) => false,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final textTheme = Theme.of(context).textTheme;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Home'),
+        backgroundColor: Colors.transparent,
+        actions: [
+          IconButton(
+            tooltip: 'Sign out',
+            onPressed: () => _signOut(context),
+            icon: const Icon(Icons.logout),
+          ),
+        ],
+      ),
+      body: Container(
+        decoration: const BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: kDarkGradient,
+          ),
+        ),
+        child: Center(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Icon(Icons.home_filled, color: Colors.white, size: 72),
+              const SizedBox(height: 16),
+              Text(
+                'Welcome Home! 🎉',
+                style: textTheme.headlineSmall?.copyWith(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'This is your main app screen.',
+                style: textTheme.bodyMedium?.copyWith(color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
@@ -322,6 +391,11 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
     final textTheme = Theme.of(context).textTheme;
 
     return Scaffold(
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('Auth'),
+        centerTitle: true,
+      ),
       body: Container(
         decoration: const BoxDecoration(
           gradient: LinearGradient(
@@ -477,7 +551,19 @@ class _SignInFormState extends State<SignInForm> {
           ),
         ),
         const SizedBox(height: 28),
-        GradientButton(label: 'Sign In', onPressed: () {}),
+        GradientButton(
+          label: 'Sign In',
+          onPressed: () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            await prefs.setBool(kSignedInKey, true);
+            if (!mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          },
+        ),
         const SizedBox(height: 24),
         const DividerWithText(label: 'Or continue with'),
         const SizedBox(height: 24),
@@ -559,7 +645,19 @@ class _SignUpFormState extends State<SignUpForm> {
           ],
         ),
         const SizedBox(height: 32),
-        GradientButton(label: 'Create Account', onPressed: () {}),
+        GradientButton(
+          label: 'Create Account',
+          onPressed: () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            await prefs.setBool(kSignedInKey, true);
+            if (!mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          },
+        ),
         const SizedBox(height: 24),
         const DividerWithText(label: 'Or sign up with'),
         const SizedBox(height: 24),
@@ -700,10 +798,36 @@ class SocialRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
-      children: const [
-        SocialButton(icon: Icons.g_mobiledata, label: 'Google'),
-        SizedBox(width: 16),
-        SocialButton(icon: Icons.phone, label: 'Phone'),
+      children: [
+        SocialButton(
+          icon: Icons.g_mobiledata,
+          label: 'Google',
+          onPressed: () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            await prefs.setBool(kSignedInKey, true);
+            if (!context.mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          },
+        ),
+        const SizedBox(width: 16),
+        SocialButton(
+          icon: Icons.phone,
+          label: 'Phone',
+          onPressed: () async {
+            final SharedPreferences prefs =
+                await SharedPreferences.getInstance();
+            await prefs.setBool(kSignedInKey, true);
+            if (!context.mounted) return;
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          },
+        ),
       ],
     );
   }
@@ -746,13 +870,20 @@ class _SocialButtonState extends State<SocialButton> {
               ? kPrimaryColor.withOpacity(0.1)
               : Colors.transparent,
         ),
-        child: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Icon(widget.icon, color: Colors.white, size: 20),
-            const SizedBox(width: 8),
-            Text(widget.label, style: const TextStyle(color: Colors.white)),
-          ],
+        child: InkWell(
+          onTap: widget.onPressed,
+          borderRadius: BorderRadius.circular(12),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(widget.icon, color: Colors.white, size: 20),
+                const SizedBox(width: 8),
+                Text(widget.label, style: const TextStyle(color: Colors.white)),
+              ],
+            ),
+          ),
         ),
       ),
     );
