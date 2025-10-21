@@ -3,7 +3,7 @@ import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -922,25 +922,12 @@ class SocialRow extends StatelessWidget {
               ),
             );
             try {
-              final GoogleSignInAccount? googleUser =
-                  await GoogleSignIn().signIn();
-              if (googleUser == null) {
-                // User cancelled the picker
-                if (!context.mounted) return;
-                Navigator.of(context, rootNavigator: true).pop();
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Google sign-in was cancelled')),
-                );
-                return;
+              final googleProvider = GoogleAuthProvider();
+              if (kIsWeb) {
+                await FirebaseAuth.instance.signInWithPopup(googleProvider);
+              } else {
+                await FirebaseAuth.instance.signInWithProvider(googleProvider);
               }
-
-              final GoogleSignInAuthentication googleAuth =
-                  await googleUser.authentication;
-              final credential = GoogleAuthProvider.credential(
-                accessToken: googleAuth.accessToken,
-                idToken: googleAuth.idToken,
-              );
-              await FirebaseAuth.instance.signInWithCredential(credential);
               if (!context.mounted) return;
               Navigator.of(context, rootNavigator: true).pop();
               Navigator.of(context).pushAndRemoveUntil(
