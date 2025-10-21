@@ -47,14 +47,13 @@ class LaunchDecider extends StatelessWidget {
   const LaunchDecider({super.key});
 
   Future<Widget> _getInitialScreen() async {
-    // final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // final bool isOnboardingComplete =
-    //     prefs.getBool(kOnboardingCompleteKey) ?? false;
-    // if (!isOnboardingComplete) {
-    //   return const OnboardingScreen();
-    // }
-    // return const AuthGate();
-    return const OnboardingScreen();
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    final bool isOnboardingComplete =
+        prefs.getBool(kOnboardingCompleteKey) ?? false;
+    if (!isOnboardingComplete) {
+      return const OnboardingScreen();
+    }
+    return const AuthGate();
   }
 
   @override
@@ -214,10 +213,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _completeOnboarding() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    // await prefs.setBool(kOnboardingCompleteKey, true);
+    await prefs.setBool(kOnboardingCompleteKey, true);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AuthScreen()),
+      MaterialPageRoute(builder: (_) => const AuthGate()),
     );
   }
 
@@ -485,11 +484,26 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                       ),
                       const SizedBox(height: 20),
                       TextButton(
-                        onPressed: () {
-                          Navigator.of(context).pushAndRemoveUntil(
-                            MaterialPageRoute(builder: (_) => const HomeScreen()),
-                            (route) => false,
-                          );
+                        onPressed: () async {
+                          final SharedPreferences prefs =
+                              await SharedPreferences.getInstance();
+                          final bool isOnboardingComplete =
+                              prefs.getBool(kOnboardingCompleteKey) ?? false;
+                          if (!isOnboardingComplete) {
+                            if (!context.mounted) return;
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                  builder: (_) => const OnboardingScreen()),
+                              (route) => false,
+                            );
+                          } else {
+                            if (!context.mounted) return;
+                            Navigator.of(context).pushAndRemoveUntil(
+                              MaterialPageRoute(
+                                  builder: (_) => const HomeScreen()),
+                              (route) => false,
+                            );
+                          }
                         },
                         child: const Text(
                           'Skip for now',
@@ -761,11 +775,23 @@ class _SignUpFormState extends State<SignUpForm> {
         const SocialRow(),
         const SizedBox(height: 20),
         TextButton(
-          onPressed: () {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const HomeScreen()),
-              (route) => false,
-            );
+          onPressed: () async {
+            final SharedPreferences prefs = await SharedPreferences.getInstance();
+            final bool isOnboardingComplete =
+                prefs.getBool(kOnboardingCompleteKey) ?? false;
+            if (!isOnboardingComplete) {
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+                (route) => false,
+              );
+            } else {
+              if (!context.mounted) return;
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            }
           },
           child: const Text(
             'Skip for now',
