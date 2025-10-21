@@ -458,111 +458,122 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
   Widget build(BuildContext context) {
     final textTheme = Theme.of(context).textTheme;
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: kDarkGradient,
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
-              child: FadeTransition(
-                opacity: _fadeAnimation,
-                child: SlideTransition(
-                  position: _slideAnimation,
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const AuthLogo(),
-                      const SizedBox(height: 32),
-                      Text(
-                        isSignIn ? 'Welcome Back' : 'Create Account',
-                        style: textTheme.headlineMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        isSignIn
-                            ? 'Sign in to your account to continue'
-                            : 'Join us and start your journey',
-                        style: textTheme.bodyMedium?.copyWith(
-                          color: Colors.white70,
-                        ),
-                      ),
-                      const SizedBox(height: 40),
-                      AnimatedSwitcher(
-                        duration: kAnimationNormal,
-                        child: isSignIn
-                            ? const SignInForm(key: ValueKey('SignIn'))
-                            : const SignUpForm(key: ValueKey('SignUp')),
-                      ),
-                      const SizedBox(height: 24),
-                      Row(
+      body: Stack(
+        children: [
+          // Main gradient background with auth content
+          Container(
+            decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: kDarkGradient,
+              ),
+            ),
+            child: SafeArea(
+              child: Center(
+                child: SingleChildScrollView(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
+                  child: FadeTransition(
+                    opacity: _fadeAnimation,
+                    child: SlideTransition(
+                      position: _slideAnimation,
+                      child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
+                          const AuthLogo(),
+                          const SizedBox(height: 32),
+                          Text(
+                            isSignIn ? 'Welcome Back' : 'Create Account',
+                            style: textTheme.headlineMedium?.copyWith(
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
                           Text(
                             isSignIn
-                                ? "Don't have an account? "
-                                : "Already have an account? ",
+                                ? 'Sign in to your account to continue'
+                                : 'Join us and start your journey',
                             style: textTheme.bodyMedium?.copyWith(
                               color: Colors.white70,
                             ),
                           ),
-                          GestureDetector(
-                            onTap: _toggleAuthMode,
-                            child: Text(
-                              isSignIn ? 'Sign Up' : 'Sign In',
-                              style: const TextStyle(
-                                color: kPrimaryColor,
-                                fontWeight: FontWeight.bold,
+                          const SizedBox(height: 40),
+                          AnimatedSwitcher(
+                            duration: kAnimationNormal,
+                            child: isSignIn
+                                ? const SignInForm(key: ValueKey('SignIn'))
+                                : const SignUpForm(key: ValueKey('SignUp')),
+                          ),
+                          const SizedBox(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Text(
+                                isSignIn
+                                    ? "Don't have an account? "
+                                    : "Already have an account? ",
+                                style: textTheme.bodyMedium?.copyWith(
+                                  color: Colors.white70,
+                                ),
                               ),
-                            ),
+                              GestureDetector(
+                                onTap: _toggleAuthMode,
+                                child: Text(
+                                  isSignIn ? 'Sign Up' : 'Sign In',
+                                  style: const TextStyle(
+                                    color: kPrimaryColor,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
-                    ],
+                    ),
                   ),
                 ),
               ),
             ),
           ),
-        ),
-      ),
-      bottomNavigationBar: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
-          child: TextButton(
-            onPressed: () async {
-              final SharedPreferences prefs =
-                  await SharedPreferences.getInstance();
-              final bool isOnboardingComplete =
-                  prefs.getBool(kOnboardingCompleteKey) ?? false;
-              if (!isOnboardingComplete) {
-                if (!context.mounted) return;
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-                  (route) => false,
-                );
-              } else {
-                if (!context.mounted) return;
-                Navigator.of(context).pushAndRemoveUntil(
-                  MaterialPageRoute(builder: (_) => const HomeScreen()),
-                  (route) => false,
-                );
-              }
-            },
-            child: const Text(
-              'Skip for now',
-              style: TextStyle(color: Colors.white70),
+          // Persistent top-right Skip button
+          SafeArea(
+            child: Align(
+              alignment: Alignment.topRight,
+              child: Padding(
+                padding: const EdgeInsets.only(top: 8, right: 8),
+                child: TextButton(
+                  onPressed: () async {
+                    final SharedPreferences prefs =
+                        await SharedPreferences.getInstance();
+                    final bool isOnboardingComplete =
+                        prefs.getBool(kOnboardingCompleteKey) ?? false;
+                    if (!isOnboardingComplete) {
+                      if (!context.mounted) return;
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                            builder: (_) => const OnboardingScreen()),
+                        (route) => false,
+                      );
+                    } else {
+                      if (!context.mounted) return;
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(builder: (_) => const HomeScreen()),
+                        (route) => false,
+                      );
+                    }
+                  },
+                  child: const Text(
+                    'Skip for now',
+                    style: TextStyle(color: Colors.white70),
+                  ),
+                ),
+              ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }
