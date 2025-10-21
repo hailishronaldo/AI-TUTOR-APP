@@ -164,7 +164,7 @@ class HomeScreen extends StatelessWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                'This is your main app screen.',
+                'Home Screen.',
                 style: textTheme.bodyMedium?.copyWith(color: Colors.white70),
               ),
             ],
@@ -964,7 +964,7 @@ class SocialRow extends StatelessWidget {
         ),
         const SizedBox(width: 16),
         SocialButton(
-          icon: CupertinoIcons.logo_apple,
+          icon: Icons.apple_outlined,
           label: 'Apple',
           onPressed: () async {
             ScaffoldMessenger.of(context).showSnackBar(
