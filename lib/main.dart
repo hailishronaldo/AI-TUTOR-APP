@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -46,14 +47,14 @@ class LaunchDecider extends StatelessWidget {
   const LaunchDecider({super.key});
 
   Future<Widget> _getInitialScreen() async {
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final bool isOnboardingComplete =
-        prefs.getBool(kOnboardingCompleteKey) ?? false;
-    if (!isOnboardingComplete) {
-      return const OnboardingScreen();
-    }
-
-    return const AuthGate();
+    // final SharedPreferences prefs = await SharedPreferences.getInstance();
+    // final bool isOnboardingComplete =
+    //     prefs.getBool(kOnboardingCompleteKey) ?? false;
+    // if (!isOnboardingComplete) {
+    //   return const OnboardingScreen();
+    // }
+    // return const AuthGate();
+    return const OnboardingScreen();
   }
 
   @override
@@ -213,7 +214,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _completeOnboarding() async {
     final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(kOnboardingCompleteKey, true);
+    // await prefs.setBool(kOnboardingCompleteKey, true);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const AuthScreen()),
@@ -482,6 +483,19 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
+                      const SizedBox(height: 20),
+                      TextButton(
+                        onPressed: () {
+                          Navigator.of(context).pushAndRemoveUntil(
+                            MaterialPageRoute(builder: (_) => const HomeScreen()),
+                            (route) => false,
+                          );
+                        },
+                        child: const Text(
+                          'Skip for now',
+                          style: TextStyle(color: Colors.white70),
+                        ),
+                      ),
                     ],
                   ),
                 ),
@@ -742,9 +756,22 @@ class _SignUpFormState extends State<SignUpForm> {
                 },
         ),
         const SizedBox(height: 24),
-        const DividerWithText(label: 'Or sign up with'),
+        const DividerWithText(label: 'Or continue with'),
         const SizedBox(height: 24),
         const SocialRow(),
+        const SizedBox(height: 20),
+        TextButton(
+          onPressed: () {
+            Navigator.of(context).pushAndRemoveUntil(
+              MaterialPageRoute(builder: (_) => const HomeScreen()),
+              (route) => false,
+            );
+          },
+          child: const Text(
+            'Skip for now',
+            style: TextStyle(color: Colors.white70),
+          ),
+        ),
       ],
     );
   }
@@ -937,11 +964,11 @@ class SocialRow extends StatelessWidget {
         ),
         const SizedBox(width: 16),
         SocialButton(
-          icon: Icons.phone,
-          label: 'Phone',
+          icon: CupertinoIcons.logo_apple,
+          label: 'Apple',
           onPressed: () async {
             ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Phone sign-in not implemented')),
+              const SnackBar(content: Text('Apple sign-in not implemented')),
             );
           },
         ),
