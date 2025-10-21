@@ -526,38 +526,40 @@ class _AuthScreenState extends State<AuthScreen> with TickerProviderStateMixin {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 20),
-                      TextButton(
-                        onPressed: () async {
-                          final SharedPreferences prefs =
-                              await SharedPreferences.getInstance();
-                          final bool isOnboardingComplete =
-                              prefs.getBool(kOnboardingCompleteKey) ?? false;
-                          if (!isOnboardingComplete) {
-                            if (!context.mounted) return;
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(
-                                  builder: (_) => const OnboardingScreen()),
-                              (route) => false,
-                            );
-                          } else {
-                            if (!context.mounted) return;
-                            Navigator.of(context).pushAndRemoveUntil(
-                              MaterialPageRoute(
-                                  builder: (_) => const HomeScreen()),
-                              (route) => false,
-                            );
-                          }
-                        },
-                        child: const Text(
-                          'Skip for now',
-                          style: TextStyle(color: Colors.white70),
-                        ),
-                      ),
                     ],
                   ),
                 ),
               ),
+            ),
+          ),
+        ),
+      ),
+      bottomNavigationBar: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 0, 24, 24),
+          child: TextButton(
+            onPressed: () async {
+              final SharedPreferences prefs =
+                  await SharedPreferences.getInstance();
+              final bool isOnboardingComplete =
+                  prefs.getBool(kOnboardingCompleteKey) ?? false;
+              if (!isOnboardingComplete) {
+                if (!context.mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const OnboardingScreen()),
+                  (route) => false,
+                );
+              } else {
+                if (!context.mounted) return;
+                Navigator.of(context).pushAndRemoveUntil(
+                  MaterialPageRoute(builder: (_) => const HomeScreen()),
+                  (route) => false,
+                );
+              }
+            },
+            child: const Text(
+              'Skip for now',
+              style: TextStyle(color: Colors.white70),
             ),
           ),
         ),
@@ -817,31 +819,7 @@ class _SignUpFormState extends State<SignUpForm> {
         const DividerWithText(label: 'Or continue with'),
         const SizedBox(height: 24),
         const SocialRow(),
-        const SizedBox(height: 20),
-        TextButton(
-          onPressed: () async {
-            final SharedPreferences prefs = await SharedPreferences.getInstance();
-            final bool isOnboardingComplete =
-                prefs.getBool(kOnboardingCompleteKey) ?? false;
-            if (!isOnboardingComplete) {
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const OnboardingScreen()),
-                (route) => false,
-              );
-            } else {
-              if (!context.mounted) return;
-              Navigator.of(context).pushAndRemoveUntil(
-                MaterialPageRoute(builder: (_) => const HomeScreen()),
-                (route) => false,
-              );
-            }
-          },
-          child: const Text(
-            'Skip for now',
-            style: TextStyle(color: Colors.white70),
-          ),
-        ),
+      const SizedBox(height: 20),
       ],
     );
   }
