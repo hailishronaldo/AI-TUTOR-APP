@@ -1,9 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../constants/app_constants.dart';
 import '../screens/home_screen.dart';
+import '../screens/phone_auth_screen.dart';
 
 // ✨ GLASS INPUT
 class GlassTextField extends StatelessWidget {
@@ -137,6 +137,7 @@ class SocialRow extends StatelessWidget {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
+        // Google
         SocialButton(
           icon: Icons.g_mobiledata,
           label: 'Google',
@@ -178,13 +179,51 @@ class SocialRow extends StatelessWidget {
           },
         ),
         const SizedBox(width: 16),
+        // Phone
         SocialButton(
-          icon: Icons.apple_outlined,
-          label: 'Apple',
-          onPressed: () async {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Apple sign-in not implemented')),
+          icon: Icons.phone_iphone,
+          label: 'Phone',
+          onPressed: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (_) => const PhoneAuthScreen()),
             );
+          },
+        ),
+        const SizedBox(width: 16),
+        // Skip for now (anonymous)
+        SocialButton(
+          icon: Icons.fast_forward,
+          label: 'Skip',
+          onPressed: () async {
+            if (!context.mounted) return;
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const Center(
+                child: CircularProgressIndicator(color: kPrimaryColor),
+              ),
+            );
+            try {
+              await FirebaseAuth.instance.signInAnonymously();
+              if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            } on FirebaseAuthException catch (e) {
+              if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.message ?? 'Skip failed')),
+              );
+            } catch (_) {
+              if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Error while skipping sign-in')),
+              );
+            }
           },
         ),
       ],
