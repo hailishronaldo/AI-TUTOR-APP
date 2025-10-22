@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../main.dart'; // For constants and AuthGate
+import '../main.dart'; // For constants
+import 'home_screen.dart';
 import '../widgets/ui_components.dart'; // Added import for GradientButton
 
 // 🧭 ONBOARDING
@@ -38,7 +39,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     await prefs.setBool(kOnboardingCompleteKey, true);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AuthGate()),
+      MaterialPageRoute(builder: (_) => const HomeScreen()),
     );
   }
 
