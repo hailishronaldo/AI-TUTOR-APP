@@ -190,7 +190,7 @@ class SocialRow extends StatelessWidget {
           },
         ),
         const SizedBox(width: 16),
-        // Skip for now (anonymous)
+        // Skip for now (guest)
         SocialButton(
           icon: Icons.fast_forward,
           label: 'Skip',
@@ -204,7 +204,6 @@ class SocialRow extends StatelessWidget {
               ),
             );
             try {
-              await FirebaseAuth.instance.signInAnonymously();
               if (!context.mounted) return;
               Navigator.of(context, rootNavigator: true).pop();
               Navigator.of(context).pushAndRemoveUntil(
