@@ -238,25 +238,6 @@ class _SignInFormState extends State<SignInForm> {
           },
         ),
         const SizedBox(height: 16),
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (_) => const OnboardingScreen(),
-              ),
-                  (route) => false,
-            );
-          },
-          child: const Text(
-            'Skip for now',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        const SizedBox(height: 16),
         const DividerWithText(label: 'Or continue with'),
         const SizedBox(height: 24),
         const SocialRow(),
@@ -387,25 +368,6 @@ class _SignUpFormState extends State<SignUpForm> {
               if (mounted) setState(() => _isLoading = false);
             }
           },
-        ),
-        const SizedBox(height: 16),
-        TextButton(
-          onPressed: () {
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (_) => const OnboardingScreen(),
-              ),
-                  (route) => false,
-            );
-          },
-          child: const Text(
-            'Skip for now',
-            style: TextStyle(
-              color: Colors.white70,
-              fontSize: 14,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
         ),
         const SizedBox(height: 16),
         const DividerWithText(label: 'Or continue with'),
