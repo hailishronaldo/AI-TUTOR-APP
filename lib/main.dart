@@ -61,14 +61,19 @@ class LaunchDecider extends StatelessWidget {
   const LaunchDecider({super.key});
 
   Future<Widget> _getInitialScreen() async {
+    // COMMENTED OUT: First-time check logic
+    // Uncomment the code below to enable first-time onboarding check
+    /*
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final bool isOnboardingComplete =
         prefs.getBool(kOnboardingCompleteKey) ?? false;
     if (!isOnboardingComplete) {
       return const OnboardingScreen();
     }
-    // Allow guest access after onboarding without requiring sign-in
-    return const HomeScreen();
+    */
+
+    // Always show onboarding screen first
+    return const OnboardingScreen();
   }
 
   @override
