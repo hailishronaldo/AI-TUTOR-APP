@@ -134,8 +134,10 @@ class SocialRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Wrap(
+      spacing: 12,
+      runSpacing: 12,
+      alignment: WrapAlignment.center,
       children: [
         // Google
         SocialButton(
@@ -178,7 +180,6 @@ class SocialRow extends StatelessWidget {
             }
           },
         ),
-        const SizedBox(width: 16),
         // Phone
         SocialButton(
           icon: Icons.phone_iphone,
@@ -189,7 +190,6 @@ class SocialRow extends StatelessWidget {
             );
           },
         ),
-        const SizedBox(width: 16),
         // Skip for now (guest)
         SocialButton(
           icon: Icons.fast_forward,
@@ -254,32 +254,32 @@ class _SocialButtonState extends State<SocialButton> {
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
-      child: AnimatedContainer(
-        duration: kAnimationFast,
-        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
-        decoration: BoxDecoration(
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: _isHovered ? kPrimaryColor : Colors.white24,
-            width: 1.2,
-          ),
-          color: _isHovered
-              ? kPrimaryColor.withOpacity(0.1)
-              : Colors.transparent,
-        ),
-        child: InkWell(
-          onTap: widget.onPressed,
-          borderRadius: BorderRadius.circular(12),
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(widget.icon, color: Colors.white, size: 20),
-                const SizedBox(width: 8),
-                Text(widget.label, style: const TextStyle(color: Colors.white)),
-              ],
+      child: InkWell(
+        onTap: widget.onPressed,
+        borderRadius: BorderRadius.circular(12),
+        child: AnimatedContainer(
+          duration: kAnimationFast,
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: _isHovered ? kPrimaryColor : Colors.white24,
+              width: 1.2,
             ),
+            color: _isHovered
+                ? kPrimaryColor.withOpacity(0.1)
+                : Colors.transparent,
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(widget.icon, color: Colors.white, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                widget.label,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+              ),
+            ],
           ),
         ),
       ),
