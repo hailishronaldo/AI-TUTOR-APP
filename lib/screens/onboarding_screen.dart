@@ -35,8 +35,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   Future<void> _completeOnboarding() async {
+    // COMMENTED OUT: Saving onboarding complete status
+    // Uncomment to enable persistent onboarding completion tracking
+    /*
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool(kOnboardingCompleteKey, true);
+    */
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       MaterialPageRoute(builder: (_) => const AuthScreen()),
