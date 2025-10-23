@@ -48,10 +48,6 @@ build/
 /ios/Flutter/Flutter.podspec
 /ios/ServiceDefinitions.json
 
-# Firebase (optional — uncomment if you don’t want to commit these)
-/android/app/google-services.json
-/ios/Runner/GoogleService-Info.plist
-
 # Symbolication & obfuscation
 app.*.symbols
 app.*.map.json
