@@ -3,9 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_constants.dart';
 import '../screens/home_screen.dart';
-import '../screens/phone_auth_screen.dart';
 
-// ✨ GLASS INPUT
 class GlassTextField extends StatelessWidget {
   final TextEditingController controller;
   final String hintText;
@@ -52,7 +50,6 @@ class GlassTextField extends StatelessWidget {
   }
 }
 
-// 🟣 GRADIENT BUTTON
 class GradientButton extends StatefulWidget {
   final String label;
   final VoidCallback onPressed;
@@ -128,7 +125,6 @@ class _GradientButtonState extends State<GradientButton>
   }
 }
 
-// 🌐 SOCIAL BUTTONS ROW
 class SocialRow extends StatelessWidget {
   const SocialRow({super.key});
 
@@ -139,7 +135,6 @@ class SocialRow extends StatelessWidget {
       runSpacing: 12,
       alignment: WrapAlignment.center,
       children: [
-        // Google
         SocialButton(
           icon: Icons.g_mobiledata,
           label: 'Google',
@@ -180,20 +175,50 @@ class SocialRow extends StatelessWidget {
             }
           },
         ),
-        // Phone
         SocialButton(
-          icon: Icons.phone_iphone,
-          label: 'Phone',
-          onPressed: () {
-            Navigator.of(context).push(
-              MaterialPageRoute(builder: (_) => const PhoneAuthScreen()),
+          icon: Icons.apple_rounded,
+          label: 'Apple',
+          onPressed: () async {
+            if (!context.mounted) return;
+            showDialog(
+              context: context,
+              barrierDismissible: false,
+              builder: (_) => const Center(
+                child: CircularProgressIndicator(color: kPrimaryColor),
+              ),
             );
+            try {
+              final appleProvider = OAuthProvider('apple.com');
+              if (kIsWeb) {
+                await FirebaseAuth.instance.signInWithPopup(appleProvider);
+              } else {
+                await FirebaseAuth.instance.signInWithProvider(appleProvider);
+              }
+              if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
+              Navigator.of(context).pushAndRemoveUntil(
+                MaterialPageRoute(builder: (_) => const HomeScreen()),
+                (route) => false,
+              );
+            } on FirebaseAuthException catch (e) {
+              if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(e.message ?? 'Apple sign-in failed')),
+              );
+            } catch (_) {
+              if (!context.mounted) return;
+              Navigator.of(context, rootNavigator: true).pop();
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Apple sign-in error')),
+              );
+            }
           },
         ),
-        // Skip for now (guest)
         SocialButton(
-          icon: Icons.fast_forward,
+          icon: Icons.arrow_forward_rounded,
           label: 'Skip',
+          isSkip: true,
           onPressed: () async {
             if (!context.mounted) return;
             showDialog(
@@ -209,12 +234,6 @@ class SocialRow extends StatelessWidget {
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const HomeScreen()),
                 (route) => false,
-              );
-            } on FirebaseAuthException catch (e) {
-              if (!context.mounted) return;
-              Navigator.of(context, rootNavigator: true).pop();
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text(e.message ?? 'Skip failed')),
               );
             } catch (_) {
               if (!context.mounted) return;
@@ -234,23 +253,111 @@ class SocialButton extends StatefulWidget {
   final IconData icon;
   final String label;
   final VoidCallback? onPressed;
+  final bool isSkip;
 
   const SocialButton({
     super.key,
     required this.icon,
     required this.label,
     this.onPressed,
+    this.isSkip = false,
   });
 
   @override
   State<SocialButton> createState() => _SocialButtonState();
 }
 
-class _SocialButtonState extends State<SocialButton> {
+class _SocialButtonState extends State<SocialButton>
+    with SingleTickerProviderStateMixin {
   bool _isHovered = false;
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: kAnimationFast,
+  );
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (widget.isSkip) {
+      final scale = Tween<double>(
+        begin: 1,
+        end: 0.92,
+      ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+      return MouseRegion(
+        onEnter: (_) => setState(() => _isHovered = true),
+        onExit: (_) => setState(() => _isHovered = false),
+        child: GestureDetector(
+          onTapDown: (_) => _controller.forward(),
+          onTapUp: (_) {
+            _controller.reverse();
+            widget.onPressed?.call();
+          },
+          onTapCancel: () => _controller.reverse(),
+          child: ScaleTransition(
+            scale: scale,
+            child: AnimatedContainer(
+              duration: kAnimationFast,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: _isHovered ? Colors.white : Colors.white38,
+                  width: 1.5,
+                ),
+                gradient: _isHovered
+                    ? LinearGradient(
+                        colors: [
+                          Colors.white.withOpacity(0.15),
+                          Colors.white.withOpacity(0.05),
+                        ],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      )
+                    : null,
+                boxShadow: _isHovered
+                    ? [
+                        BoxShadow(
+                          color: Colors.white.withOpacity(0.2),
+                          blurRadius: 12,
+                          spreadRadius: 1,
+                        ),
+                      ]
+                    : null,
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    widget.label,
+                    style: TextStyle(
+                      color: _isHovered ? Colors.white : Colors.white70,
+                      fontSize: 14,
+                      fontWeight: _isHovered
+                          ? FontWeight.w600
+                          : FontWeight.w500,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                  const SizedBox(width: 6),
+                  Icon(
+                    widget.icon,
+                    color: _isHovered ? Colors.white : Colors.white70,
+                    size: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      );
+    }
+
     return MouseRegion(
       onEnter: (_) => setState(() => _isHovered = true),
       onExit: (_) => setState(() => _isHovered = false),
@@ -287,7 +394,6 @@ class _SocialButtonState extends State<SocialButton> {
   }
 }
 
-// 🔸 DIVIDER TEXT
 class DividerWithText extends StatelessWidget {
   final String label;
 
@@ -311,7 +417,6 @@ class DividerWithText extends StatelessWidget {
   }
 }
 
-// 🎨 AUTH LOGO
 class AuthLogo extends StatelessWidget {
   const AuthLogo({super.key});
 
@@ -322,9 +427,7 @@ class AuthLogo extends StatelessWidget {
       height: 80,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: const LinearGradient(
-          colors: [kPrimaryColor, kAccentColor],
-        ),
+        gradient: const LinearGradient(colors: [kPrimaryColor, kAccentColor]),
         boxShadow: [
           BoxShadow(
             color: kPrimaryColor.withOpacity(0.4),
@@ -334,11 +437,7 @@ class AuthLogo extends StatelessWidget {
         ],
       ),
       child: const Center(
-        child: Icon(
-          Icons.school_rounded,
-          color: Colors.white,
-          size: 40,
-        ),
+        child: Icon(Icons.school_rounded, color: Colors.white, size: 40),
       ),
     );
   }

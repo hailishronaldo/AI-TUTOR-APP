@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../main.dart';
 import 'auth_screen.dart';
-import '../widgets/ui_components.dart';
+import '../widgets/onboarding_ui_component.dart';
 
 // 🧭 ONBOARDING
 class OnboardingScreen extends StatefulWidget {
@@ -38,13 +38,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     // COMMENTED OUT: Saving onboarding complete status
     // Uncomment to enable persistent onboarding completion tracking
     /*
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    await prefs.setBool(kOnboardingCompleteKey, true);
     */
+    final SharedPreferences prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(onboarding_complete_v2, true);
+
     if (!mounted) return;
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const AuthScreen()),
-    );
+    Navigator.of(
+      context,
+    ).pushReplacement(MaterialPageRoute(builder: (_) => const AuthScreen()));
   }
 
   void _goNext() {
@@ -99,7 +100,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   child: PageView.builder(
                     controller: _pageController,
                     itemCount: _pages.length,
-                    onPageChanged: (index) => setState(() => _currentPage = index),
+                    onPageChanged: (index) =>
+                        setState(() => _currentPage = index),
                     itemBuilder: (context, index) {
                       final page = _pages[index];
                       return _OnboardingPage(page: page);
@@ -107,10 +109,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                _DotsIndicator(
-                  count: _pages.length,
-                  index: _currentPage,
-                ),
+                _DotsIndicator(count: _pages.length, index: _currentPage),
                 const SizedBox(height: 20),
                 GradientButton(
                   label: isLast ? 'Get Started' : 'Next',

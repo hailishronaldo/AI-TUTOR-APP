@@ -16,7 +16,10 @@ import 'constants/app_constants.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Initialize Firebase first
   await Firebase.initializeApp();
+
   runApp(ProviderScope(child: const MyApp()));
 }
 
@@ -24,7 +27,7 @@ Future<void> main() async {
 const kPrimaryColor = Color(0xFFB366FF);
 const kAccentColor = Color(0xFFFF66B2);
 const kDarkGradient = [Color(0xFF1A0033), Color(0xFF2D0052), Color(0xFF1A0033)];
-const kOnboardingCompleteKey = 'onboarding_complete';
+const onboarding_complete_v2 = 'onboarding_complete_v2';
 
 const kAnimationFast = Duration(milliseconds: 200);
 const kAnimationNormal = Duration(milliseconds: 500);
@@ -47,10 +50,7 @@ class MyApp extends StatelessWidget {
         ),
         textTheme: GoogleFonts.interTextTheme(
           ThemeData(brightness: Brightness.dark).textTheme,
-        ).apply(
-          bodyColor: Colors.white,
-          displayColor: Colors.white,
-        ),
+        ).apply(bodyColor: Colors.white, displayColor: Colors.white),
       ),
       home: const LaunchDecider(),
     );
@@ -66,7 +66,7 @@ class LaunchDecider extends StatelessWidget {
     /*
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     final bool isOnboardingComplete =
-        prefs.getBool(kOnboardingCompleteKey) ?? false;
+        prefs.getBool(onboarding_complete_v2) ?? false;
     if (!isOnboardingComplete) {
       return const OnboardingScreen();
     }

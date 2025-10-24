@@ -1,9 +1,11 @@
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/material.dart';
 import '../models/data_models.dart';
 
 class LearningRepository {
   Future<UserProfile> fetchUserProfile() async {
-    final String fallbackName = FirebaseAuth.instance.currentUser?.displayName ?? 'Learner';
+    final String fallbackName =
+        FirebaseAuth.instance.currentUser?.displayName ?? 'Learner';
     return Future<UserProfile>.delayed(
       const Duration(milliseconds: 400),
       () => UserProfile(
@@ -132,10 +134,7 @@ class LearningRepository {
     return Future<List<Insight>>.delayed(
       const Duration(milliseconds: 420),
       () => const [
-        Insight(
-          id: 'i1',
-          text: 'You learn best in the morning. Keep it up!',
-        ),
+        Insight(id: 'i1', text: 'You learn best in the morning. Keep it up!'),
         Insight(
           id: 'i2',
           text: 'Your visual learning style is improving your scores.',
