@@ -108,11 +108,10 @@ class ChatMessage {
 }
 
 class AIService {
-  // Fixed configuration: hardcoded Gemini key and provider
-  static const String _apiKey = "AIzaSyDz8fWmnhu8OJvXmlL7L4ZNQGU6mGiRcNU2x";
+  // Read from compile-time or runtime env; no hardcoded default
+  static const String _apiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 
-  // Always configured since key is bundled
-  bool get isConfigured => true;
+  bool get isConfigured => _apiKey.isNotEmpty;
 
   Future<AITutorial> generateTutorial(Topic topic) async {
     if (!isConfigured) {

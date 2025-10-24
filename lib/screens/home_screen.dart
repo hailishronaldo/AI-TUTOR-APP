@@ -8,6 +8,7 @@ import '../providers/learning_providers.dart'; // Added import for providers
 import 'chat_screen.dart';
 import '../models/topic_model.dart';
 import 'topic_detail_screen.dart';
+import '../services/visited_topics_service.dart';
 
 // 🏠 HOME
 class HomeScreen extends ConsumerStatefulWidget {
@@ -202,12 +203,14 @@ class _AiTopicExplorer extends StatefulWidget {
 class _AiTopicExplorerState extends State<_AiTopicExplorer> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = '';
+  String? _selectedCategory; // null = All
 
   static const List<Topic> _allTopics = [
     Topic(
       id: '1',
       title: 'Flutter Basics',
       description: 'Learn the fundamentals of Flutter development',
+      category: 'Flutter',
       icon: Icons.smartphone,
       
       estimatedMinutes: 30,
@@ -217,6 +220,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '2',
       title: 'State Management',
       description: 'Master state management with Provider and Riverpod',
+      category: 'Flutter',
       icon: Icons.settings_applications,
       
       estimatedMinutes: 45,
@@ -226,6 +230,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '3',
       title: 'REST APIs',
       description: 'Understanding and working with REST APIs',
+      category: 'Backend',
       icon: Icons.cloud,
       
       estimatedMinutes: 40,
@@ -235,6 +240,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '4',
       title: 'Firebase Integration',
       description: 'Integrate Firebase services in your Flutter app',
+      category: 'Cloud',
       icon: Icons.data_exploration_rounded,
       estimatedMinutes: 50,
       difficulty: 'Intermediate',
@@ -243,6 +249,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '5',
       title: 'Custom Animations',
       description: 'Create beautiful custom animations in Flutter',
+      category: 'Flutter',
       icon: Icons.animation,
       estimatedMinutes: 35,
       difficulty: 'Advanced',
@@ -251,6 +258,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '6',
       title: 'Material Design',
       description: 'Implement Material Design principles',
+      category: 'UI/UX',
       icon: Icons.design_services,
       
       estimatedMinutes: 25,
@@ -260,6 +268,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '7',
       title: 'Responsive Layouts',
       description: 'Build responsive UIs for all screen sizes',
+      category: 'UI/UX',
       icon: Icons.devices,
       
       estimatedMinutes: 30,
@@ -269,6 +278,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '8',
       title: 'Local Database',
       description: 'Work with SQLite and local storage',
+      category: 'Backend',
       icon: Icons.storage,
       
       estimatedMinutes: 40,
@@ -278,6 +288,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '9',
       title: 'Testing in Flutter',
       description: 'Write unit, widget, and integration tests',
+      category: 'Testing',
       icon: Icons.bug_report,
       
       estimatedMinutes: 45,
@@ -287,20 +298,83 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '10',
       title: 'App Deployment',
       description: 'Deploy your app to App Store and Play Store',
+      category: 'DevOps',
       icon: Icons.publish,
       
       estimatedMinutes: 60,
       difficulty: 'Advanced',
     ),
+    // More topics and categories
+    Topic(
+      id: '11',
+      title: 'Dart Fundamentals',
+      description: 'Syntax, types, collections, and async in Dart',
+      category: 'Dart',
+      icon: Icons.code,
+      estimatedMinutes: 40,
+      difficulty: 'Beginner',
+    ),
+    Topic(
+      id: '12',
+      title: 'Clean Architecture',
+      description: 'Layered architecture patterns for Flutter apps',
+      category: 'Architecture',
+      icon: Icons.account_tree,
+      estimatedMinutes: 50,
+      difficulty: 'Advanced',
+    ),
+    Topic(
+      id: '13',
+      title: 'CI/CD with GitHub Actions',
+      description: 'Automate build, test and deploy for Flutter',
+      category: 'DevOps',
+      icon: Icons.sync,
+      estimatedMinutes: 55,
+      difficulty: 'Intermediate',
+    ),
+    Topic(
+      id: '14',
+      title: 'Accessibility',
+      description: 'Build accessible apps with a11y best practices',
+      category: 'UI/UX',
+      icon: Icons.accessibility,
+      estimatedMinutes: 30,
+      difficulty: 'Beginner',
+    ),
+    Topic(
+      id: '15',
+      title: 'Security Basics',
+      description: 'Secure storage, auth, and network in apps',
+      category: 'Security',
+      icon: Icons.lock,
+      estimatedMinutes: 40,
+      difficulty: 'Intermediate',
+    ),
   ];
 
+  static final Map<String, Topic> _idToTopic = {
+    for (final t in _allTopics) t.id: t,
+  };
+
+  List<String> get _allCategories {
+    final set = <String>{ for (final t in _allTopics) t.category };
+    final list = set.toList()..sort();
+    return list;
+  }
+
   List<Topic> get _filteredTopics {
-    if (_searchQuery.isEmpty) {
-      return _allTopics;
+    Iterable<Topic> base = _allTopics;
+    if (_selectedCategory != null) {
+      base = base.where((t) => t.category == _selectedCategory);
     }
-    return _allTopics.where((topic) {
-      return topic.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          topic.description.toLowerCase().contains(_searchQuery.toLowerCase());
+    if (_searchQuery.isEmpty) {
+      return base.toList();
+    }
+    final String q = _searchQuery.toLowerCase();
+    return base.where((topic) {
+      return topic.title.toLowerCase().contains(q) ||
+          topic.description.toLowerCase().contains(q) ||
+          topic.category.toLowerCase().contains(q);
     }).toList();
   }
 
@@ -317,6 +391,8 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       children: [
         _buildHeader(context),
         _buildSearchBar(context),
+        _buildCategoryChips(context),
+        _buildRecentlyVisited(context),
         _buildTopicsList(context),
       ],
     );
@@ -387,8 +463,134 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
     );
   }
 
+  Widget _buildCategoryChips(BuildContext context) {
+    final categories = _allCategories;
+    return Padding(
+      padding: const EdgeInsets.only(top: 4, bottom: 8),
+      child: SizedBox(
+        height: 42,
+        child: ListView(
+          scrollDirection: Axis.horizontal,
+          children: [
+            const SizedBox(width: 4),
+            _buildCategoryChip('All', _selectedCategory == null, onTap: () {
+              setState(() => _selectedCategory = null);
+            }),
+            const SizedBox(width: 8),
+            for (final c in categories) ...[
+              _buildCategoryChip(c, _selectedCategory == c, onTap: () {
+                setState(() => _selectedCategory = c);
+              }),
+              const SizedBox(width: 8),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCategoryChip(String label, bool selected, {required VoidCallback onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? kPrimaryColor : Colors.white.withOpacity(0.08),
+          border: Border.all(color: Colors.white.withOpacity(0.15)),
+          borderRadius: BorderRadius.circular(24),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              selected ? Icons.check_circle : Icons.category,
+              color: Colors.white,
+              size: 16,
+            ),
+            const SizedBox(width: 6),
+            Text(
+              label,
+              style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildRecentlyVisited(BuildContext context) {
+    return FutureBuilder<List<String>>(
+      future: VisitedTopicsService.getVisitedIdsOrdered(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData || (snapshot.data?.isEmpty ?? true)) {
+          return const SizedBox.shrink();
+        }
+        final ids = snapshot.data!;
+        final List<Topic> visitedTopics = ids
+            .map((id) => _idToTopic[id])
+            .whereType<Topic>()
+            .toList();
+        if (visitedTopics.isEmpty) return const SizedBox.shrink();
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Padding(
+              padding: const EdgeInsets.only(top: 8, bottom: 8),
+              child: Row(
+                children: [
+                  const Icon(Icons.history, color: kPrimaryColor, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    'Recently visited',
+                    style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            SizedBox(
+              height: 120,
+              child: Builder(
+                builder: (context) {
+                  final int itemCount = visitedTopics.length > 12 ? 12 : visitedTopics.length;
+                  return ListView.separated(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: itemCount,
+                    separatorBuilder: (_, __) => const SizedBox(width: 12),
+                    itemBuilder: (context, index) {
+                      final topic = visitedTopics[index];
+                      return _VisitedTopicTile(
+                        topic: topic,
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => TopicDetailScreen(topic: topic),
+                            ),
+                          ).then((_) => setState(() {}));
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   Widget _buildTopicsList(BuildContext context) {
     final topics = _filteredTopics;
+
+    // Group by category
+    final Map<String, List<Topic>> byCategory = <String, List<Topic>>{};
+    for (final t in topics) {
+      byCategory.putIfAbsent(t.category, () => <Topic>[]).add(t);
+    }
 
     if (topics.isEmpty) {
       return Padding(
@@ -408,24 +610,57 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       );
     }
 
-    return ListView.builder(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      padding: const EdgeInsets.only(top: 12),
-      itemCount: topics.length,
-      itemBuilder: (context, index) {
-        return _TopicCard(
-          topic: topics[index],
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TopicDetailScreen(topic: topics[index]),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(top: 12),
+          child: Row(
+            children: [
+              const Icon(Icons.view_list, color: kPrimaryColor, size: 20),
+              const SizedBox(width: 8),
+              Text(
+                _selectedCategory == null ? 'All categories' : _selectedCategory!,
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
-            );
-          },
-        );
-      },
+            ],
+          ),
+        ),
+        for (final entry in byCategory.entries) ...[
+          Padding(
+            padding: const EdgeInsets.only(top: 16, bottom: 8),
+            child: Text(
+              entry.key,
+              style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+            ),
+          ),
+          ListView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            itemCount: entry.value.length,
+            itemBuilder: (context, index) {
+              final topic = entry.value[index];
+              return _TopicCard(
+                topic: topic,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => TopicDetailScreen(topic: topic),
+                    ),
+                  ).then((_) => setState(() {}));
+                },
+              );
+            },
+          ),
+        ],
+      ],
     );
   }
 }
@@ -563,6 +798,63 @@ class _TopicCard extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+class _VisitedTopicTile extends StatelessWidget {
+  final Topic topic;
+  final VoidCallback onTap;
+  const _VisitedTopicTile({required this.topic, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 220,
+      child: GlassCard(
+        padding: const EdgeInsets.all(12),
+        child: InkWell(
+          onTap: onTap,
+          borderRadius: BorderRadius.circular(16),
+          child: Row(
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [kPrimaryColor, kAccentColor]),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(topic.icon, color: Colors.white, size: 22),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      topic.title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 13,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      topic.category,
+                      style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

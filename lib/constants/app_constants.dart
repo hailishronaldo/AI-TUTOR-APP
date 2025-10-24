@@ -7,8 +7,8 @@ const kDarkGradient = [Color(0xFF1A0033), Color(0xFF2D0052), Color(0xFF1A0033)];
 const onboarding_complete_v2 = 'onboarding_complete';
 
 // 🔑 AI PROVIDER CONFIG
-// NOTE: Using bundled Gemini API key as requested.
-const kGeminiApiKey = 'AIzaSyDz8fWmnhu8OJvXmlL7L4ZNQGU6mGiRcNU';
+// Read at runtime from dart-define; keep empty default in constants
+const String kGeminiApiKey = String.fromEnvironment('GEMINI_API_KEY', defaultValue: '');
 
 // ⏱️ ANIMATION DURATIONS
 const kAnimationFast = Duration(milliseconds: 200);

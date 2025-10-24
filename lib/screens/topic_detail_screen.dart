@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../models/topic_model.dart';
 import '../services/ai_service.dart';
+import '../services/visited_topics_service.dart';
 import '../main.dart';
 // Removed API config screen import; key is bundled
 
@@ -24,6 +25,8 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   void initState() {
     super.initState();
     _checkAndGenerateTutorial();
+    // Record visit
+    VisitedTopicsService.recordVisit(widget.topic.id);
   }
 
   Future<void> _checkAndGenerateTutorial() async {
