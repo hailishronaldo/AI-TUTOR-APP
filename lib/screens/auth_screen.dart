@@ -1,11 +1,9 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import '../constants/app_constants.dart';
 import '../widgets/auth_widgets.dart';
 import 'home_screen.dart';
-import 'onboarding_screen.dart';
 
 // 🔒 AUTH SCREEN: Sign in / Sign up with animations
 class AuthScreen extends StatefulWidget {

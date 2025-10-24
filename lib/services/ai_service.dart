@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/topic_model.dart';
-import '../constants/app_constants.dart';
 
 class ChatMessage {
   final String role; // 'user' or 'assistant'
@@ -12,7 +11,7 @@ class ChatMessage {
 
 class AIService {
   // Fixed configuration: hardcoded Gemini key and provider
-  static const String _apiKey = kGeminiApiKey;
+  static const String _apiKey = "AIzaSyDz8fWmnhu8OJvXmlL7L4ZNQGU6mGiRcHnofda";
 
   // Always configured since key is bundled
   bool get isConfigured => true;
@@ -77,7 +76,7 @@ Format the response as JSON with this structure:
 
   Future<Map<String, dynamic>> _callGeminiAPI(String prompt) async {
     final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$_apiKey');
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$_apiKey');
 
     final response = await http.post(
       url,
