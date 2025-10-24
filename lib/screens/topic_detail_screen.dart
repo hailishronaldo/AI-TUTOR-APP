@@ -125,13 +125,6 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                Text(
-                  widget.topic.category,
-                  style: TextStyle(
-                    color: Colors.white.withOpacity(0.7),
-                    fontSize: 13,
-                  ),
-                ),
               ],
             ),
           ),

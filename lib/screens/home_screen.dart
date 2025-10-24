@@ -209,7 +209,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       title: 'Flutter Basics',
       description: 'Learn the fundamentals of Flutter development',
       icon: Icons.smartphone,
-      category: 'Mobile Development',
+      
       estimatedMinutes: 30,
       difficulty: 'Beginner',
     ),
@@ -218,7 +218,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       title: 'State Management',
       description: 'Master state management with Provider and Riverpod',
       icon: Icons.settings_applications,
-      category: 'Mobile Development',
+      
       estimatedMinutes: 45,
       difficulty: 'Intermediate',
     ),
@@ -227,7 +227,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       title: 'REST APIs',
       description: 'Understanding and working with REST APIs',
       icon: Icons.cloud,
-      category: 'Backend',
+      
       estimatedMinutes: 40,
       difficulty: 'Intermediate',
     ),
@@ -235,8 +235,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       id: '4',
       title: 'Firebase Integration',
       description: 'Integrate Firebase services in your Flutter app',
-      icon: Icons.firebase,
-      category: 'Backend',
+      icon: Icons.data_exploration_rounded,
       estimatedMinutes: 50,
       difficulty: 'Intermediate',
     ),
@@ -245,7 +244,6 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       title: 'Custom Animations',
       description: 'Create beautiful custom animations in Flutter',
       icon: Icons.animation,
-      category: 'UI/UX',
       estimatedMinutes: 35,
       difficulty: 'Advanced',
     ),
@@ -254,7 +252,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       title: 'Material Design',
       description: 'Implement Material Design principles',
       icon: Icons.design_services,
-      category: 'UI/UX',
+      
       estimatedMinutes: 25,
       difficulty: 'Beginner',
     ),
@@ -263,7 +261,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       title: 'Responsive Layouts',
       description: 'Build responsive UIs for all screen sizes',
       icon: Icons.devices,
-      category: 'UI/UX',
+      
       estimatedMinutes: 30,
       difficulty: 'Intermediate',
     ),
@@ -272,7 +270,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       title: 'Local Database',
       description: 'Work with SQLite and local storage',
       icon: Icons.storage,
-      category: 'Data',
+      
       estimatedMinutes: 40,
       difficulty: 'Intermediate',
     ),
@@ -281,7 +279,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       title: 'Testing in Flutter',
       description: 'Write unit, widget, and integration tests',
       icon: Icons.bug_report,
-      category: 'Testing',
+      
       estimatedMinutes: 45,
       difficulty: 'Advanced',
     ),
@@ -290,7 +288,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
       title: 'App Deployment',
       description: 'Deploy your app to App Store and Play Store',
       icon: Icons.publish,
-      category: 'DevOps',
+      
       estimatedMinutes: 60,
       difficulty: 'Advanced',
     ),
@@ -302,8 +300,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
     }
     return _allTopics.where((topic) {
       return topic.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          topic.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          topic.category.toLowerCase().contains(_searchQuery.toLowerCase());
+          topic.description.toLowerCase().contains(_searchQuery.toLowerCase());
     }).toList();
   }
 
@@ -512,11 +509,6 @@ class _TopicCard extends StatelessWidget {
                             const SizedBox(height: 8),
                             Row(
                               children: [
-                                _buildChip(
-                                  topic.category,
-                                  Icons.category,
-                                  Colors.blue.withOpacity(0.3),
-                                ),
                                 const SizedBox(width: 8),
                                 _buildChip(
                                   '${topic.estimatedMinutes} min',

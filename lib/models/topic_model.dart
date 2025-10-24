@@ -6,7 +6,6 @@ class Topic {
   final String title;
   final String description;
   final IconData icon;
-  final String category;
   final int estimatedMinutes;
   final String difficulty;
 
@@ -15,7 +14,6 @@ class Topic {
     required this.title,
     required this.description,
     required this.icon,
-    required this.category,
     required this.estimatedMinutes,
     required this.difficulty,
   });
