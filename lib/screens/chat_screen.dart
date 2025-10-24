@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../main.dart';
 import '../services/ai_service.dart';
-import 'api_config_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -63,9 +62,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     ),
               ),
               Text(
-                aiService.isConfigured
-                    ? 'Ask me anything'
-                    : 'Configure API to start chatting',
+                'Ask me anything',
                 style: Theme.of(context)
                     .textTheme
                     .bodySmall
@@ -90,9 +87,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   size: 64, color: Colors.white.withOpacity(0.3)),
               const SizedBox(height: 12),
               Text(
-                aiService.isConfigured
-                    ? 'Start the conversation below'
-                    : 'Configure API to start chatting',
+                'Start the conversation below',
                 style: TextStyle(color: Colors.white.withOpacity(0.7)),
               ),
             ],
@@ -158,9 +153,7 @@ class _ChatScreenState extends State<ChatScreen> {
                     minLines: 1,
                     maxLines: 4,
                     decoration: InputDecoration(
-                      hintText: aiService.isConfigured
-                          ? 'Type a message...'
-                          : 'Set API to chat',
+                      hintText: 'Type a message...',
                       hintStyle:
                           TextStyle(color: Colors.white.withOpacity(0.5)),
                       border: InputBorder.none,
@@ -176,8 +169,7 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           const SizedBox(width: 8),
           _buildSendButton(),
-          const SizedBox(width: 8),
-          _buildConfigButton(),
+          
         ],
       ),
     );
@@ -206,41 +198,9 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildConfigButton() {
-    return SizedBox(
-      height: 44,
-      width: 44,
-      child: ElevatedButton(
-        onPressed: () async {
-          final result = await Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => const ApiConfigScreen()),
-          );
-          if (result == true) setState(() {});
-        },
-        style: ElevatedButton.styleFrom(
-          padding: EdgeInsets.zero,
-          backgroundColor: Colors.white.withOpacity(0.08),
-          foregroundColor: Colors.white,
-          shape: const CircleBorder(),
-        ),
-        child: const Icon(Icons.settings),
-      ),
-    );
-  }
-
   Future<void> _handleSend() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-    if (!aiService.isConfigured) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Please configure API first'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
     setState(() {/*
       _messages.add(ChatMessage(role: 'user', content: text));
       _isSending = true;

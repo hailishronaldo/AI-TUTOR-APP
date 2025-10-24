@@ -3,7 +3,7 @@ import 'dart:ui';
 import '../models/topic_model.dart';
 import '../services/ai_service.dart';
 import '../main.dart';
-import 'api_config_screen.dart';
+// Removed API config screen import; key is bundled
 
 class TopicDetailScreen extends StatefulWidget {
   final Topic topic;
@@ -27,12 +27,6 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   }
 
   Future<void> _checkAndGenerateTutorial() async {
-    if (!aiService.isConfigured) {
-      setState(() {
-        _error = 'API not configured';
-      });
-      return;
-    }
     await _generateTutorial();
   }
 
@@ -56,16 +50,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
     }
   }
 
-  void _navigateToApiConfig() async {
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const ApiConfigScreen()),
-    );
-
-    if (result == true) {
-      _checkAndGenerateTutorial();
-    }
-  }
+  // Removed navigation to API config; no longer needed
 
   @override
   Widget build(BuildContext context) {
@@ -150,8 +135,6 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   }
 
   Widget _buildErrorState() {
-    final isNotConfigured = _error == 'API not configured';
-
     return Center(
       child: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -159,13 +142,13 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
             Icon(
-              isNotConfigured ? Icons.key_off : Icons.error_outline,
+              Icons.error_outline,
               size: 64,
               color: Colors.white.withOpacity(0.5),
             ),
             const SizedBox(height: 16),
             Text(
-              isNotConfigured ? 'API Key Required' : 'Something went wrong',
+              'Something went wrong',
               style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
@@ -174,9 +157,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
             ),
             const SizedBox(height: 8),
             Text(
-              isNotConfigured
-                  ? 'Please configure your API key to generate tutorials'
-                  : _error!,
+              _error!,
               style: TextStyle(
                 color: Colors.white.withOpacity(0.7),
                 fontSize: 14,
@@ -185,9 +166,9 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(
-              onPressed: isNotConfigured ? _navigateToApiConfig : _generateTutorial,
-              icon: Icon(isNotConfigured ? Icons.settings : Icons.refresh),
-              label: Text(isNotConfigured ? 'Configure API' : 'Try Again'),
+              onPressed: _generateTutorial,
+              icon: const Icon(Icons.refresh),
+              label: const Text('Try Again'),
               style: ElevatedButton.styleFrom(
                 backgroundColor: kPrimaryColor,
                 foregroundColor: Colors.white,
