@@ -2,6 +2,13 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/topic_model.dart';
 
+class ChatMessage {
+  final String role; // 'user' or 'assistant'
+  final String content;
+
+  const ChatMessage({required this.role, required this.content});
+}
+
 class AIService {
   String? _apiKey;
   String? _apiProvider;
@@ -33,6 +40,24 @@ class AIService {
       return _parseResponse(response, topic);
     } catch (e) {
       throw Exception('Failed to generate tutorial: $e');
+    }
+  }
+
+  // Simple chat API for AI tab
+  Future<String> sendChatResponse(List<ChatMessage> messages) async {
+    if (!isConfigured) {
+      throw Exception('API key not configured. Please set your API key first.');
+    }
+    try {
+      if (_apiProvider == 'gemini') {
+        return await _callGeminiChat(messages);
+      } else if (_apiProvider == 'chatgpt') {
+        return await _callChatGPTChat(messages);
+      } else {
+        throw Exception('Unsupported AI provider: $_apiProvider');
+      }
+    } catch (e) {
+      throw Exception('Failed to get chat response: $e');
     }
   }
 
@@ -104,6 +129,39 @@ Format the response as JSON with this structure:
     }
   }
 
+  Future<String> _callGeminiChat(List<ChatMessage> messages) async {
+    final url = Uri.parse(
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$_apiKey');
+
+    // Map messages to Gemini's content format
+    final contents = messages.map((m) => {
+          'role': m.role == 'assistant' ? 'model' : 'user',
+          'parts': [
+            {'text': m.content}
+          ]
+        }).toList();
+
+    final response = await http.post(
+      url,
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'contents': contents,
+        'generationConfig': {
+          'temperature': 0.7,
+          'maxOutputTokens': 1024,
+        }
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final text = data['candidates'][0]['content']['parts'][0]['text'];
+      return text as String;
+    } else {
+      throw Exception('Gemini API error: ${response.statusCode} ${response.body}');
+    }
+  }
+
   Future<Map<String, dynamic>> _callChatGPTAPI(String prompt) async {
     final url = Uri.parse('https://api.openai.com/v1/chat/completions');
 
@@ -139,6 +197,43 @@ Format the response as JSON with this structure:
       throw Exception('Failed to parse AI response');
     } else {
       throw Exception('ChatGPT API error: ${response.statusCode}');
+    }
+  }
+
+  Future<String> _callChatGPTChat(List<ChatMessage> messages) async {
+    final url = Uri.parse('https://api.openai.com/v1/chat/completions');
+
+    final openAIMessages = <Map<String, String>>[
+      {
+        'role': 'system',
+        'content': 'You are a helpful AI tutor. Answer clearly and concisely.'
+      },
+      ...messages.map((m) => {
+            'role': m.role, // 'user' | 'assistant'
+            'content': m.content,
+          }),
+    ];
+
+    final response = await http.post(
+      url,
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer $_apiKey',
+      },
+      body: jsonEncode({
+        'model': 'gpt-3.5-turbo',
+        'messages': openAIMessages,
+        'temperature': 0.7,
+        'max_tokens': 512,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final text = data['choices'][0]['message']['content'];
+      return text as String;
+    } else {
+      throw Exception('ChatGPT API error: ${response.statusCode} ${response.body}');
     }
   }
 

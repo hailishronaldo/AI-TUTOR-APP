@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
-import '../models/topic_model.dart';
 import '../main.dart';
-import 'topic_detail_screen.dart';
+import '../services/ai_service.dart';
+import 'api_config_screen.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -12,116 +12,13 @@ class ChatScreen extends StatefulWidget {
 }
 
 class _ChatScreenState extends State<ChatScreen> {
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = '';
-
-  static const List<Topic> _allTopics = [
-    Topic(
-      id: '1',
-      title: 'Flutter Basics',
-      description: 'Learn the fundamentals of Flutter development',
-      icon: Icons.smartphone,
-      category: 'Mobile Development',
-      estimatedMinutes: 30,
-      difficulty: 'Beginner',
-    ),
-    Topic(
-      id: '2',
-      title: 'State Management',
-      description: 'Master state management with Provider and Riverpod',
-      icon: Icons.settings_applications,
-      category: 'Mobile Development',
-      estimatedMinutes: 45,
-      difficulty: 'Intermediate',
-    ),
-    Topic(
-      id: '3',
-      title: 'REST APIs',
-      description: 'Understanding and working with REST APIs',
-      icon: Icons.cloud,
-      category: 'Backend',
-      estimatedMinutes: 40,
-      difficulty: 'Intermediate',
-    ),
-    Topic(
-      id: '4',
-      title: 'Firebase Integration',
-      description: 'Integrate Firebase services in your Flutter app',
-      icon: Icons.firebase,
-      category: 'Backend',
-      estimatedMinutes: 50,
-      difficulty: 'Intermediate',
-    ),
-    Topic(
-      id: '5',
-      title: 'Custom Animations',
-      description: 'Create beautiful custom animations in Flutter',
-      icon: Icons.animation,
-      category: 'UI/UX',
-      estimatedMinutes: 35,
-      difficulty: 'Advanced',
-    ),
-    Topic(
-      id: '6',
-      title: 'Material Design',
-      description: 'Implement Material Design principles',
-      icon: Icons.design_services,
-      category: 'UI/UX',
-      estimatedMinutes: 25,
-      difficulty: 'Beginner',
-    ),
-    Topic(
-      id: '7',
-      title: 'Responsive Layouts',
-      description: 'Build responsive UIs for all screen sizes',
-      icon: Icons.devices,
-      category: 'UI/UX',
-      estimatedMinutes: 30,
-      difficulty: 'Intermediate',
-    ),
-    Topic(
-      id: '8',
-      title: 'Local Database',
-      description: 'Work with SQLite and local storage',
-      icon: Icons.storage,
-      category: 'Data',
-      estimatedMinutes: 40,
-      difficulty: 'Intermediate',
-    ),
-    Topic(
-      id: '9',
-      title: 'Testing in Flutter',
-      description: 'Write unit, widget, and integration tests',
-      icon: Icons.bug_report,
-      category: 'Testing',
-      estimatedMinutes: 45,
-      difficulty: 'Advanced',
-    ),
-    Topic(
-      id: '10',
-      title: 'App Deployment',
-      description: 'Deploy your app to App Store and Play Store',
-      icon: Icons.publish,
-      category: 'DevOps',
-      estimatedMinutes: 60,
-      difficulty: 'Advanced',
-    ),
-  ];
-
-  List<Topic> get _filteredTopics {
-    if (_searchQuery.isEmpty) {
-      return _allTopics;
-    }
-    return _allTopics.where((topic) {
-      return topic.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          topic.description.toLowerCase().contains(_searchQuery.toLowerCase()) ||
-          topic.category.toLowerCase().contains(_searchQuery.toLowerCase());
-    }).toList();
-  }
+  final TextEditingController _messageController = TextEditingController();
+  final List<ChatMessage> _messages = <ChatMessage>[];
+  bool _isSending = false;
 
   @override
   void dispose() {
-    _searchController.dispose();
+    _messageController.dispose();
     super.dispose();
   }
 
@@ -139,10 +36,9 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Column(
           children: [
             _buildHeader(),
-            _buildSearchBar(),
-            Expanded(
-              child: _buildTopicsList(),
-            ),
+            const SizedBox(height: 8),
+            Expanded(child: _buildChatList()),
+            _buildInputBar(),
           ],
         ),
       ),
@@ -160,17 +56,20 @@ class _ChatScreenState extends State<ChatScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'AI Tutor',
+                'AI Chat',
                 style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.white,
                     ),
               ),
               Text(
-                'Choose a topic to learn',
-                style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                      color: Colors.white70,
-                    ),
+                aiService.isConfigured
+                    ? 'Ask me anything'
+                    : 'Configure API to start chatting',
+                style: Theme.of(context)
+                    .textTheme
+                    .bodySmall
+                    ?.copyWith(color: Colors.white70),
               ),
             ],
           ),
@@ -179,219 +78,194 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _buildSearchBar() {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.2)),
-            ),
-            child: TextField(
-              controller: _searchController,
-              style: const TextStyle(color: Colors.white),
-              decoration: InputDecoration(
-                hintText: 'Search topics...',
-                hintStyle: TextStyle(color: Colors.white.withOpacity(0.5)),
-                prefixIcon: const Icon(Icons.search, color: Colors.white70),
-                border: InputBorder.none,
-                contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              ),
-              onChanged: (value) {
-                setState(() {
-                  _searchQuery = value;
-                });
-              },
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildTopicsList() {
-    final topics = _filteredTopics;
-
-    if (topics.isEmpty) {
+  Widget _buildChatList() {
+    if (_messages.isEmpty) {
       return Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.search_off, size: 64, color: Colors.white.withOpacity(0.3)),
-            const SizedBox(height: 16),
-            Text(
-              'No topics found',
-              style: TextStyle(color: Colors.white.withOpacity(0.5), fontSize: 16),
-            ),
-          ],
+        child: Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.chat_bubble_outline,
+                  size: 64, color: Colors.white.withOpacity(0.3)),
+              const SizedBox(height: 12),
+              Text(
+                aiService.isConfigured
+                    ? 'Start the conversation below'
+                    : 'Configure API to start chatting',
+                style: TextStyle(color: Colors.white.withOpacity(0.7)),
+              ),
+            ],
+          ),
         ),
       );
     }
 
     return ListView.builder(
-      padding: const EdgeInsets.all(16),
-      itemCount: topics.length,
+      reverse: true,
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      itemCount: _messages.length,
       itemBuilder: (context, index) {
-        return _TopicCard(
-          topic: topics[index],
-          onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => TopicDetailScreen(topic: topics[index]),
-              ),
-            );
-          },
-        );
-      },
-    );
-  }
-}
-
-class _TopicCard extends StatelessWidget {
-  final Topic topic;
-  final VoidCallback onTap;
-
-  const _TopicCard({required this.topic, required this.onTap});
-
-  Color get _difficultyColor {
-    switch (topic.difficulty.toLowerCase()) {
-      case 'beginner':
-        return Colors.green;
-      case 'intermediate':
-        return Colors.orange;
-      case 'advanced':
-        return Colors.red;
-      default:
-        return Colors.grey;
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 12),
-      child: ClipRRect(
-        borderRadius: BorderRadius.circular(16),
-        child: BackdropFilter(
-          filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-          child: Container(
-            decoration: BoxDecoration(
-              color: Colors.white.withOpacity(0.08),
+        final message = _messages[_messages.length - 1 - index];
+        final isUser = message.role == 'user';
+        return Align(
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: 6),
+            child: ClipRRect(
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.white.withOpacity(0.15)),
-            ),
-            child: Material(
-              color: Colors.transparent,
-              child: InkWell(
-                onTap: onTap,
-                borderRadius: BorderRadius.circular(16),
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 56,
-                        height: 56,
-                        decoration: BoxDecoration(
-                          gradient: const LinearGradient(
-                            colors: [kPrimaryColor, kAccentColor],
-                          ),
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: Icon(topic.icon, color: Colors.white, size: 28),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              topic.title,
-                              style: const TextStyle(
-                                color: Colors.white,
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(
-                              topic.description,
-                              style: TextStyle(
-                                color: Colors.white.withOpacity(0.7),
-                                fontSize: 13,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            const SizedBox(height: 8),
-                            Row(
-                              children: [
-                                _buildChip(
-                                  topic.category,
-                                  Icons.category,
-                                  Colors.blue.withOpacity(0.3),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildChip(
-                                  '${topic.estimatedMinutes} min',
-                                  Icons.access_time,
-                                  Colors.purple.withOpacity(0.3),
-                                ),
-                                const SizedBox(width: 8),
-                                _buildChip(
-                                  topic.difficulty,
-                                  Icons.signal_cellular_alt,
-                                  _difficultyColor.withOpacity(0.3),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      Icon(
-                        Icons.arrow_forward_ios,
-                        color: Colors.white.withOpacity(0.5),
-                        size: 16,
-                      ),
-                    ],
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.78),
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: (isUser ? kAccentColor : Colors.white)
+                        .withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(16),
+                    border: Border.all(color: Colors.white.withOpacity(0.15)),
+                  ),
+                  child: Text(
+                    message.content,
+                    style:
+                        const TextStyle(color: Colors.white, height: 1.4),
                   ),
                 ),
               ),
             ),
           ),
-        ),
+        );
+      },
+    );
+  }
+
+  Widget _buildInputBar() {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
+      child: Row(
+        children: [
+          Expanded(
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(24),
+              child: BackdropFilter(
+                filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+                child: Container(
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.08),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withOpacity(0.15)),
+                  ),
+                  child: TextField(
+                    controller: _messageController,
+                    style: const TextStyle(color: Colors.white),
+                    minLines: 1,
+                    maxLines: 4,
+                    decoration: InputDecoration(
+                      hintText: aiService.isConfigured
+                          ? 'Type a message...'
+                          : 'Set API to chat',
+                      hintStyle:
+                          TextStyle(color: Colors.white.withOpacity(0.5)),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 16, vertical: 12),
+                    ),
+                    enabled: !_isSending,
+                    onSubmitted: (_) => _handleSend(),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 8),
+          _buildSendButton(),
+          const SizedBox(width: 8),
+          _buildConfigButton(),
+        ],
       ),
     );
   }
 
-  Widget _buildChip(String label, IconData icon, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 12, color: Colors.white),
-          const SizedBox(width: 4),
-          Text(
-            label,
-            style: const TextStyle(
-              color: Colors.white,
-              fontSize: 11,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
+  Widget _buildSendButton() {
+    return SizedBox(
+      height: 44,
+      width: 44,
+      child: ElevatedButton(
+        onPressed: _isSending ? null : _handleSend,
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          backgroundColor: kPrimaryColor,
+          foregroundColor: Colors.white,
+          shape: const CircleBorder(),
+        ),
+        child: _isSending
+            ? const SizedBox(
+                height: 20,
+                width: 20,
+                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
+              )
+            : const Icon(Icons.send),
       ),
     );
+  }
+
+  Widget _buildConfigButton() {
+    return SizedBox(
+      height: 44,
+      width: 44,
+      child: ElevatedButton(
+        onPressed: () async {
+          final result = await Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const ApiConfigScreen()),
+          );
+          if (result == true) setState(() {});
+        },
+        style: ElevatedButton.styleFrom(
+          padding: EdgeInsets.zero,
+          backgroundColor: Colors.white.withOpacity(0.08),
+          foregroundColor: Colors.white,
+          shape: const CircleBorder(),
+        ),
+        child: const Icon(Icons.settings),
+      ),
+    );
+  }
+
+  Future<void> _handleSend() async {
+    final text = _messageController.text.trim();
+    if (text.isEmpty) return;
+    if (!aiService.isConfigured) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Please configure API first'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+    setState(() {
+      _messages.add(ChatMessage(role: 'user', content: text));
+      _isSending = true;
+      _messageController.clear();
+    });
+    try {
+      final reply = await aiService.sendChatResponse(_messages);
+      setState(() {
+        _messages.add(ChatMessage(role: 'assistant', content: reply));
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Chat failed: $e'), backgroundColor: Colors.redAccent),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isSending = false;
+        });
+      }
+    }
   }
 }
