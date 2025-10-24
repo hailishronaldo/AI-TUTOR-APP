@@ -109,7 +109,7 @@ class ChatMessage {
 
 class AIService {
   // Fixed configuration: hardcoded Gemini key and provider
-  static const String _apiKey = "AIzaSyDz8fWmnhu8OJvXmlL7L4ZNQGU6mGiRcHnofda";
+  static const String _apiKey = "AIzaSyDz8fWmnhu8OJvXmlL7L4ZNQGU6mGiRcNU2x";
 
   // Always configured since key is bundled
   bool get isConfigured => true;
@@ -194,7 +194,7 @@ Format the response as JSON with this structure:
 
   Future<Map<String, dynamic>> _postToGemini(String prompt, {required int maxTokens}) async {
     final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_apiKey');
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$_apiKey');
 
     final response = await http.post(
       url,
@@ -238,7 +238,7 @@ Format the response as JSON with this structure:
 
   Future<String> _callGeminiChat(List<ChatMessage> messages) async {
     final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_apiKey');
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$_apiKey');
 
     // Map messages to Gemini's content format
     final contents = messages.map((m) => {

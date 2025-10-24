@@ -340,7 +340,7 @@ class _AiTopicExplorerState extends State<_AiTopicExplorer> {
                     ),
               ),
               Text(
-                'Choose a topic to learn',
+                'Choose a topic to learn now',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: Colors.white70,
                     ),
