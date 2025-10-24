@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/topic_model.dart';
+import '../constants/app_constants.dart';
 
 class ChatMessage {
   final String role; // 'user' or 'assistant'
@@ -10,15 +11,11 @@ class ChatMessage {
 }
 
 class AIService {
-  String? _apiKey;
-  String? _apiProvider;
+  // Fixed configuration: hardcoded Gemini key and provider
+  static const String _apiKey = kGeminiApiKey;
 
-  void setApiKey(String apiKey, String provider) {
-    _apiKey = apiKey;
-    _apiProvider = provider;
-  }
-
-  bool get isConfigured => _apiKey != null && _apiProvider != null;
+  // Always configured since key is bundled
+  bool get isConfigured => true;
 
   Future<AITutorial> generateTutorial(Topic topic) async {
     if (!isConfigured) {
@@ -27,16 +24,7 @@ class AIService {
 
     try {
       final String prompt = _buildPrompt(topic);
-      final Map<String, dynamic> response;
-
-      if (_apiProvider == 'gemini') {
-        response = await _callGeminiAPI(prompt);
-      } else if (_apiProvider == 'chatgpt') {
-        response = await _callChatGPTAPI(prompt);
-      } else {
-        throw Exception('Unsupported AI provider: $_apiProvider');
-      }
-
+      final Map<String, dynamic> response = await _callGeminiAPI(prompt);
       return _parseResponse(response, topic);
     } catch (e) {
       throw Exception('Failed to generate tutorial: $e');
@@ -49,13 +37,7 @@ class AIService {
       throw Exception('API key not configured. Please set your API key first.');
     }
     try {
-      if (_apiProvider == 'gemini') {
-        return await _callGeminiChat(messages);
-      } else if (_apiProvider == 'chatgpt') {
-        return await _callChatGPTChat(messages);
-      } else {
-        throw Exception('Unsupported AI provider: $_apiProvider');
-      }
+      return await _callGeminiChat(messages);
     } catch (e) {
       throw Exception('Failed to get chat response: $e');
     }
@@ -162,80 +144,7 @@ Format the response as JSON with this structure:
     }
   }
 
-  Future<Map<String, dynamic>> _callChatGPTAPI(String prompt) async {
-    final url = Uri.parse('https://api.openai.com/v1/chat/completions');
-
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_apiKey',
-      },
-      body: jsonEncode({
-        'model': 'gpt-3.5-turbo',
-        'messages': [
-          {
-            'role': 'system',
-            'content':
-                'You are an expert tutor. Create structured, educational content in JSON format.'
-          },
-          {'role': 'user', 'content': prompt}
-        ],
-        'temperature': 0.7,
-        'max_tokens': 2048,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final text = data['choices'][0]['message']['content'];
-
-      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
-      if (jsonMatch != null) {
-        return jsonDecode(jsonMatch.group(0)!);
-      }
-      throw Exception('Failed to parse AI response');
-    } else {
-      throw Exception('ChatGPT API error: ${response.statusCode}');
-    }
-  }
-
-  Future<String> _callChatGPTChat(List<ChatMessage> messages) async {
-    final url = Uri.parse('https://api.openai.com/v1/chat/completions');
-
-    final openAIMessages = <Map<String, String>>[
-      {
-        'role': 'system',
-        'content': 'You are a helpful AI tutor. Answer clearly and concisely.'
-      },
-      ...messages.map((m) => {
-            'role': m.role, // 'user' | 'assistant'
-            'content': m.content,
-          }),
-    ];
-
-    final response = await http.post(
-      url,
-      headers: {
-        'Content-Type': 'application/json',
-        'Authorization': 'Bearer $_apiKey',
-      },
-      body: jsonEncode({
-        'model': 'gpt-3.5-turbo',
-        'messages': openAIMessages,
-        'temperature': 0.7,
-        'max_tokens': 512,
-      }),
-    );
-
-    if (response.statusCode == 200) {
-      final data = jsonDecode(response.body);
-      final text = data['choices'][0]['message']['content'];
-      return text as String;
-    } else {
-      throw Exception('ChatGPT API error: ${response.statusCode} ${response.body}');
-    }
-  }
+  // Removed OpenAI-specific methods since provider is fixed to Gemini
 
   AITutorial _parseResponse(Map<String, dynamic> response, Topic topic) {
     return AITutorial(
