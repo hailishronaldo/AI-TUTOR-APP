@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'dart:ui';
 import '../main.dart'; // For constants and AuthGate
 import '../providers/learning_providers.dart'; // Added import for providers
+import 'chat_screen.dart';
 
 // 🏠 HOME
 class HomeScreen extends ConsumerStatefulWidget {
@@ -38,7 +39,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     ref.invalidate(recommendationsProvider);
     ref.invalidate(activeLessonProvider);
     ref.invalidate(weeklyActivityProvider);
-    ref.invalidate(achievementsProvider);
     ref.invalidate(dailyChallengeProvider);
     ref.invalidate(aiInsightsProvider);
     ref.invalidate(nextTopicsProvider);
@@ -56,9 +56,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     final int currentIndex = ref.watch(_navIndexProvider);
     final Widget body = switch (currentIndex) {
       0 => _HomeTab(onSignOut: () => _signOut(context), onRefresh: _refreshAll),
-      1 => const _PlaceholderTab(title: 'Learn'),
+      1 => const ChatScreen(),
       2 => const _PlaceholderTab(title: 'My Progress'),
-      3 => const _PlaceholderTab(title: 'Achievements'),
       _ => const _PlaceholderTab(title: 'Profile'),
     };
 
@@ -255,12 +254,6 @@ class _GlassNavBar extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final hasNewAchievementAsync = ref.watch(achievementsProvider);
-    final hasNewAchievement = hasNewAchievementAsync.maybeWhen(
-      data: (list) => list.any((a) => a.earned),
-      orElse: () => false,
-    );
-
     return ClipRRect(
       borderRadius: BorderRadius.circular(18),
       child: BackdropFilter(
@@ -272,33 +265,11 @@ class _GlassNavBar extends ConsumerWidget {
           type: BottomNavigationBarType.fixed,
           currentIndex: currentIndex,
           onTap: onTap,
-          items: [
-            const BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
-            const BottomNavigationBarItem(icon: Icon(Icons.menu_book_rounded), label: 'Learn'),
-            const BottomNavigationBarItem(icon: Icon(Icons.insights_rounded), label: 'Progress'),
-            BottomNavigationBarItem(
-              icon: Stack(
-                clipBehavior: Clip.none,
-                children: [
-                  const Icon(Icons.emoji_events_rounded),
-                  if (hasNewAchievement)
-                    Positioned(
-                      right: -2,
-                      top: -2,
-                      child: Container(
-                        width: 8,
-                        height: 8,
-                        decoration: const BoxDecoration(
-                          color: Colors.redAccent,
-                          shape: BoxShape.circle,
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-              label: 'Achievements',
-            ),
-            const BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
+          items: const [
+            BottomNavigationBarItem(icon: Icon(Icons.home_rounded), label: 'Home'),
+            BottomNavigationBarItem(icon: Icon(Icons.chat_bubble_rounded), label: 'Chat'),
+            BottomNavigationBarItem(icon: Icon(Icons.insights_rounded), label: 'Progress'),
+            BottomNavigationBarItem(icon: Icon(Icons.person_rounded), label: 'Profile'),
           ],
         ),
       ),
