@@ -36,8 +36,12 @@ class TutorialStep {
   });
 
   factory TutorialStep.fromJson(Map<String, dynamic> json) {
+    final dynamic rawStep = json['stepNumber'];
+    final int stepNo = rawStep is int
+        ? rawStep
+        : int.tryParse(rawStep.toString()) ?? 1;
     return TutorialStep(
-      stepNumber: json['stepNumber'] as int,
+      stepNumber: stepNo,
       title: json['title'] as String,
       content: json['content'] as String,
       codeExample: json['codeExample'] as String?,
