@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
 import '../main.dart';
+import '../services/ai_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -11,7 +12,7 @@ class ChatScreen extends StatefulWidget {
 
 class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
- // final List<ChatMessage> _messages = <ChatMessage>[];
+  final List<ChatMessage> _messages = <ChatMessage>[];
   bool _isSending = false;
 
   @override
@@ -75,7 +76,7 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildChatList() {
-    if (false) {
+    if (_messages.isEmpty) {
       return Center(
         child: Padding(
           padding: const EdgeInsets.all(24.0),
@@ -98,12 +99,12 @@ class _ChatScreenState extends State<ChatScreen> {
     return ListView.builder(
       reverse: true,
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      //itemCount: _messages.length,
+      itemCount: _messages.length,
       itemBuilder: (context, index) {
-       // final message = _messages[_messages.length - 1 - index];
-        //final isUser = message.role == 'user';
+        final message = _messages[_messages.length - 1 - index];
+        final isUser = message.role == 'user';
         return Align(
-         // alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+          alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
           child: Padding(
             padding: const EdgeInsets.symmetric(vertical: 6),
             child: ClipRRect(
@@ -115,12 +116,15 @@ class _ChatScreenState extends State<ChatScreen> {
                       maxWidth: MediaQuery.of(context).size.width * 0.78),
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(
-                   /* color: (isUser ? kAccentColor : Colors.white)
-                        .withOpacity(0.12),*/
+                    color: (isUser ? kAccentColor : Colors.white)
+                        .withOpacity(0.12),
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: Colors.white.withOpacity(0.15)),
                   ),
-
+                  child: Text(
+                    message.content,
+                    style: const TextStyle(color: Colors.white),
+                  ),
                 ),
               ),
             ),
@@ -200,16 +204,16 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _handleSend() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
-    setState(() {/*
+    setState(() {
       _messages.add(ChatMessage(role: 'user', content: text));
       _isSending = true;
-      _messageController.clear();*/
+      _messageController.clear();
     });
-    try {/*
+    try {
       final reply = await aiService.sendChatResponse(_messages);
       setState(() {
         _messages.add(ChatMessage(role: 'assistant', content: reply));
-      });*/
+      });
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

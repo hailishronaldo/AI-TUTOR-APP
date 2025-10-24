@@ -2,6 +2,68 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/topic_model.dart';
 
+// Extract a JSON object from an AI text response using heuristics.
+// 1) Prefer fenced ```json blocks
+// 2) Fallback to any fenced ``` block that looks like JSON
+// 3) Scan for the first balanced {...} block that decodes
+Map<String, dynamic> extractAiJson(String text) {
+  String? candidate;
+
+  // 1) ```json ... ```
+  final jsonFence = RegExp(r"```json\s*([\s\S]*?)\s*```", multiLine: true);
+  final jsonFenceMatch = jsonFence.firstMatch(text);
+  if (jsonFenceMatch != null) {
+    candidate = jsonFenceMatch.group(1)!.trim();
+  }
+
+  // 2) Any fenced block that looks like JSON
+  if (candidate == null) {
+    final anyFence = RegExp(r"```\s*([\s\S]*?)\s*```", multiLine: true);
+    final anyFenceMatch = anyFence.firstMatch(text);
+    if (anyFenceMatch != null) {
+      final inner = anyFenceMatch.group(1)!.trim();
+      if (inner.startsWith('{') && inner.endsWith('}')) {
+        candidate = inner;
+      }
+    }
+  }
+
+  // 3) Balanced braces scan as a last resort
+  if (candidate == null) {
+    int depth = 0;
+    int? startIndex;
+    for (int i = 0; i < text.length; i++) {
+      final ch = text[i];
+      if (ch == '{') {
+        depth++;
+        startIndex ??= i;
+      } else if (ch == '}') {
+        depth--;
+        if (depth == 0 && startIndex != null) {
+          final sub = text.substring(startIndex, i + 1).trim();
+          try {
+            final decoded = jsonDecode(sub);
+            if (decoded is Map<String, dynamic>) {
+              return decoded;
+            }
+          } catch (_) {
+            // keep scanning
+          }
+          startIndex = null;
+        }
+      }
+    }
+  }
+
+  if (candidate != null) {
+    final cleaned = candidate.replaceAll('\u200b', '');
+    final decoded = jsonDecode(cleaned);
+    if (decoded is Map<String, dynamic>) return decoded;
+  }
+
+  throw Exception('failed to parse AI response');
+}
+
 class ChatMessage {
   final String role; // 'user' or 'assistant'
   final String content;
@@ -71,12 +133,13 @@ Format the response as JSON with this structure:
     }
   ]
 }
+\nRules:\n- You must respond with ONLY valid JSON.\n- Do not include markdown, code fences, or commentary.
 ''';
   }
 
   Future<Map<String, dynamic>> _callGeminiAPI(String prompt) async {
     final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=$_apiKey');
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_apiKey');
 
     final response = await http.post(
       url,
@@ -92,19 +155,15 @@ Format the response as JSON with this structure:
         'generationConfig': {
           'temperature': 0.7,
           'maxOutputTokens': 2048,
+          'responseMimeType': 'application/json'
         }
       }),
     );
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      final text = data['candidates'][0]['content']['parts'][0]['text'];
-
-      final jsonMatch = RegExp(r'\{[\s\S]*\}').firstMatch(text);
-      if (jsonMatch != null) {
-        return jsonDecode(jsonMatch.group(0)!);
-      }
-      throw Exception('Failed to parse AI response');
+      final String text = data['candidates'][0]['content']['parts'][0]['text'] as String;
+      return extractAiJson(text);
     } else {
       throw Exception('Gemini API error: ${response.statusCode}');
     }
@@ -112,7 +171,7 @@ Format the response as JSON with this structure:
 
   Future<String> _callGeminiChat(List<ChatMessage> messages) async {
     final url = Uri.parse(
-        'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=$_apiKey');
+        'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=$_apiKey');
 
     // Map messages to Gemini's content format
     final contents = messages.map((m) => {
