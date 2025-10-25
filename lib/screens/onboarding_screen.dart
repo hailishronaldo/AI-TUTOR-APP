@@ -5,7 +5,7 @@ import '../main.dart';
 import 'auth_screen.dart';
 import 'home_screen.dart';
 import '../widgets/onboarding_ui_component.dart';
-import '../services/supabase_service.dart';
+import '../services/firebase_service.dart';
 
 // 🧭 ONBOARDING
 class OnboardingScreen extends StatefulWidget {
@@ -53,7 +53,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       final user = userCredential.user;
 
       if (user != null) {
-        await supabaseService.createOrUpdateUserProfile(
+        await firebaseService.createOrUpdateUserProfile(
           user.uid,
           email: null,
           displayName: 'Anonymous User',

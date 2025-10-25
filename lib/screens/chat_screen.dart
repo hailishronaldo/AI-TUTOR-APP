@@ -3,7 +3,7 @@ import 'dart:ui';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../main.dart';
 import '../services/ai_service.dart';
-import '../services/supabase_service.dart';
+import '../services/firebase_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -28,7 +28,7 @@ class _ChatScreenState extends State<ChatScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final chatData = await supabaseService.getChatMessages(user.uid);
+        final chatData = await firebaseService.getChatMessages(user.uid);
         setState(() {
           _messages.clear();
           _messages.addAll(
@@ -252,7 +252,7 @@ class _ChatScreenState extends State<ChatScreen> {
     });
 
     if (user != null) {
-      await supabaseService.saveChatMessage(
+      await firebaseService.saveChatMessage(
         userId: user.uid,
         role: 'user',
         content: text,
@@ -266,7 +266,7 @@ class _ChatScreenState extends State<ChatScreen> {
       });
 
       if (user != null) {
-        await supabaseService.saveChatMessage(
+        await firebaseService.saveChatMessage(
           userId: user.uid,
           role: 'assistant',
           content: reply,

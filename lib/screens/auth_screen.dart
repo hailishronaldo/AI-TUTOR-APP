@@ -3,7 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_constants.dart';
 import '../widgets/auth_widgets.dart';
-import '../services/supabase_service.dart';
+import '../services/firebase_service.dart';
 import 'home_screen.dart';
 
 // 🔒 AUTH SCREEN: Sign in / Sign up with animations
@@ -218,7 +218,7 @@ class _SignInFormState extends State<SignInForm> {
               );
 
               if (userCredential.user != null) {
-                await supabaseService.createOrUpdateUserProfile(
+                await firebaseService.createOrUpdateUserProfile(
                   userCredential.user!.uid,
                   email: userCredential.user!.email,
                   displayName: userCredential.user!.displayName,
@@ -360,7 +360,7 @@ class _SignUpFormState extends State<SignUpForm> {
               }
 
               if (credential.user != null) {
-                await supabaseService.createOrUpdateUserProfile(
+                await firebaseService.createOrUpdateUserProfile(
                   credential.user!.uid,
                   email: credential.user!.email,
                   displayName: name.isNotEmpty ? name : null,

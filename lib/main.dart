@@ -10,7 +10,7 @@ import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
-import 'services/supabase_service.dart';
+import 'services/firebase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -18,11 +18,6 @@ Future<void> main() async {
   await Firebase.initializeApp();
 
   await dotenv.load(fileName: ".env");
-
-  final supabaseUrl = dotenv.env['VITE_SUPABASE_URL'] ?? '';
-  final supabaseAnonKey = dotenv.env['VITE_SUPABASE_SUPABASE_ANON_KEY'] ?? '';
-
-  await supabaseService.initialize(supabaseUrl, supabaseAnonKey);
 
   runApp(ProviderScope(child: const MyApp()));
 }
@@ -68,7 +63,7 @@ class LaunchDecider extends StatelessWidget {
     final User? currentUser = FirebaseAuth.instance.currentUser;
 
     if (currentUser != null) {
-      await supabaseService.createOrUpdateUserProfile(
+      await firebaseService.createOrUpdateUserProfile(
         currentUser.uid,
         email: currentUser.email,
         displayName: currentUser.displayName,

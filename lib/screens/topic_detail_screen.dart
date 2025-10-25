@@ -5,7 +5,7 @@ import '../models/topic_model.dart';
 import '../models/quiz_model.dart';
 import '../services/ai_service.dart';
 import '../services/visited_topics_service.dart';
-import '../services/supabase_service.dart';
+import '../services/firebase_service.dart';
 import '../main.dart';
 import 'quiz_screen.dart';
 
@@ -67,7 +67,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   Future<void> _recordVisit() async {
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      await supabaseService.recordTopicVisit(user.uid, widget.topic.id);
+      await firebaseService.recordTopicVisit(user.uid, widget.topic.id);
     }
     VisitedTopicsService.recordVisit(widget.topic.id);
   }
@@ -81,7 +81,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final cachedData = await supabaseService.getTopicDetails(user.uid, widget.topic.id);
+        final cachedData = await firebaseService.getTopicDetails(user.uid, widget.topic.id);
 
         if (cachedData != null) {
           final steps = (cachedData['steps'] as List)
@@ -94,7 +94,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
               topicTitle: widget.topic.title,
               summary: cachedData['summary'] as String,
               steps: steps,
-              generatedAt: DateTime.parse(cachedData['created_at'] as String),
+              generatedAt: DateTime.now(),
             );
             _isLoading = false;
           });
@@ -122,7 +122,7 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
 
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        await supabaseService.saveTopicDetails(
+        await firebaseService.saveTopicDetails(
           userId: user.uid,
           topicId: widget.topic.id,
           topicTitle: widget.topic.title,
