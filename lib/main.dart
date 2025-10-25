@@ -5,16 +5,24 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:ui';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 import 'screens/onboarding_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/auth_screen.dart';
+import 'services/supabase_service.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // Initialize Firebase first
   await Firebase.initializeApp();
+
+  await dotenv.load(fileName: ".env");
+
+  final supabaseUrl = dotenv.env['VITE_SUPABASE_URL'] ?? '';
+  final supabaseAnonKey = dotenv.env['VITE_SUPABASE_SUPABASE_ANON_KEY'] ?? '';
+
+  await supabaseService.initialize(supabaseUrl, supabaseAnonKey);
 
   runApp(ProviderScope(child: const MyApp()));
 }
@@ -57,18 +65,18 @@ class LaunchDecider extends StatelessWidget {
   const LaunchDecider({super.key});
 
   Future<Widget> _getInitialScreen() async {
-    // COMMENTED OUT: First-time check logic
-    // Uncomment the code below to enable first-time onboarding check
-    /*
-    final SharedPreferences prefs = await SharedPreferences.getInstance();
-    final bool isOnboardingComplete =
-        prefs.getBool(onboarding_complete_v2) ?? false;
-    if (!isOnboardingComplete) {
-      return const OnboardingScreen();
-    }
-    */
+    final User? currentUser = FirebaseAuth.instance.currentUser;
 
-    // Always show onboarding screen first
+    if (currentUser != null) {
+      await supabaseService.createOrUpdateUserProfile(
+        currentUser.uid,
+        email: currentUser.email,
+        displayName: currentUser.displayName,
+        isAnonymous: currentUser.isAnonymous,
+      );
+      return const HomeScreen();
+    }
+
     return const OnboardingScreen();
   }
 

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../constants/app_constants.dart';
 import '../widgets/auth_widgets.dart';
+import '../services/supabase_service.dart';
 import 'home_screen.dart';
 
 // 🔒 AUTH SCREEN: Sign in / Sign up with animations
@@ -211,10 +212,20 @@ class _SignInFormState extends State<SignInForm> {
             }
             setState(() => _isLoading = true);
             try {
-              await FirebaseAuth.instance.signInWithEmailAndPassword(
+              final userCredential = await FirebaseAuth.instance.signInWithEmailAndPassword(
                 email: email,
                 password: password,
               );
+
+              if (userCredential.user != null) {
+                await supabaseService.createOrUpdateUserProfile(
+                  userCredential.user!.uid,
+                  email: userCredential.user!.email,
+                  displayName: userCredential.user!.displayName,
+                  isAnonymous: false,
+                );
+              }
+
               if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const HomeScreen()),
@@ -347,6 +358,16 @@ class _SignUpFormState extends State<SignUpForm> {
               if (credential.user != null && name.isNotEmpty) {
                 await credential.user!.updateDisplayName(name);
               }
+
+              if (credential.user != null) {
+                await supabaseService.createOrUpdateUserProfile(
+                  credential.user!.uid,
+                  email: credential.user!.email,
+                  displayName: name.isNotEmpty ? name : null,
+                  isAnonymous: false,
+                );
+              }
+
               if (!mounted) return;
               Navigator.of(context).pushAndRemoveUntil(
                 MaterialPageRoute(builder: (_) => const HomeScreen()),

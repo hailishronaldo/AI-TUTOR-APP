@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/topic_model.dart';
+import '../models/quiz_model.dart';
 
 // Extract a JSON object from an AI text response using layered heuristics.
 // Strategy:
@@ -127,6 +128,20 @@ class AIService {
     }
   }
 
+  Future<Quiz> generateQuiz(Topic topic, String tutorialSummary) async {
+    if (!isConfigured) {
+      throw Exception('API key not configured. Please set your API key first.');
+    }
+
+    try {
+      final String prompt = _buildQuizPrompt(topic, tutorialSummary);
+      final Map<String, dynamic> response = await _callGeminiAPI(prompt);
+      return Quiz.fromJson(response);
+    } catch (e) {
+      throw Exception('Failed to generate quiz: $e');
+    }
+  }
+
   // Simple chat API for AI tab
   Future<String> sendChatResponse(List<ChatMessage> messages) async {
     if (!isConfigured) {
@@ -169,6 +184,35 @@ Format the response as JSON with this structure:
   ]
 }
 \nRules:\n- You must respond with ONLY valid JSON.\n- Do not include markdown, code fences, or commentary.\n- Keep each field under ~80 words to avoid truncation.
+''';
+  }
+
+  String _buildQuizPrompt(Topic topic, String tutorialSummary) {
+    return '''
+Create a quiz to test understanding of the topic: "${topic.title}"
+
+Tutorial Summary: $tutorialSummary
+
+Generate 5 multiple-choice questions that test key concepts from this topic.
+
+Format the response as JSON with this structure:
+{
+  "questions": [
+    {
+      "question": "Question text here",
+      "options": ["Option A", "Option B", "Option C", "Option D"],
+      "correctAnswerIndex": 0,
+      "explanation": "Why this is the correct answer"
+    }
+  ]
+}
+
+Rules:
+- You must respond with ONLY valid JSON
+- Each question should have exactly 4 options
+- correctAnswerIndex is 0-based (0 for first option, 1 for second, etc.)
+- Questions should test understanding, not just memorization
+- Keep questions and explanations concise
 ''';
   }
 

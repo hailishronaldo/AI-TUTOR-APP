@@ -1,10 +1,13 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/topic_model.dart';
+import '../models/quiz_model.dart';
 import '../services/ai_service.dart';
 import '../services/visited_topics_service.dart';
+import '../services/supabase_service.dart';
 import '../main.dart';
-// Removed API config screen import; key is bundled
+import 'quiz_screen.dart';
 
 class TopicDetailScreen extends StatefulWidget {
   final Topic topic;
@@ -21,16 +24,91 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
   String? _error;
   int _currentStepIndex = 0;
 
+  void _showQuiz() async {
+    if (_tutorial == null) return;
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(
+        child: CircularProgressIndicator(color: kPrimaryColor),
+      ),
+    );
+
+    try {
+      final quiz = await aiService.generateQuiz(widget.topic, _tutorial!.summary);
+      if (!mounted) return;
+      Navigator.pop(context);
+
+      Navigator.of(context).push(
+        MaterialPageRoute(
+          builder: (_) => QuizScreen(
+            quiz: quiz,
+            topicTitle: widget.topic.title,
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      Navigator.pop(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to generate quiz: $e')),
+      );
+    }
+  }
+
   @override
   void initState() {
     super.initState();
     _checkAndGenerateTutorial();
-    // Record visit
+    _recordVisit();
+  }
+
+  Future<void> _recordVisit() async {
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      await supabaseService.recordTopicVisit(user.uid, widget.topic.id);
+    }
     VisitedTopicsService.recordVisit(widget.topic.id);
   }
 
   Future<void> _checkAndGenerateTutorial() async {
-    await _generateTutorial();
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final cachedData = await supabaseService.getTopicDetails(user.uid, widget.topic.id);
+
+        if (cachedData != null) {
+          final steps = (cachedData['steps'] as List)
+              .map((step) => TutorialStep.fromJson(step as Map<String, dynamic>))
+              .toList();
+
+          setState(() {
+            _tutorial = AITutorial(
+              topicId: widget.topic.id,
+              topicTitle: widget.topic.title,
+              summary: cachedData['summary'] as String,
+              steps: steps,
+              generatedAt: DateTime.parse(cachedData['created_at'] as String),
+            );
+            _isLoading = false;
+          });
+          return;
+        }
+      }
+
+      await _generateTutorial();
+    } catch (e) {
+      setState(() {
+        _error = e.toString();
+        _isLoading = false;
+      });
+    }
   }
 
   Future<void> _generateTutorial() async {
@@ -41,6 +119,18 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
 
     try {
       final tutorial = await aiService.generateTutorial(widget.topic);
+
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        await supabaseService.saveTopicDetails(
+          userId: user.uid,
+          topicId: widget.topic.id,
+          topicTitle: widget.topic.title,
+          summary: tutorial.summary,
+          steps: tutorial.steps.map((step) => step.toJson()).toList(),
+        );
+      }
+
       setState(() {
         _tutorial = tutorial;
         _isLoading = false;
@@ -478,11 +568,9 @@ class _TopicDetailScreenState extends State<TopicDetailScreen> {
           if (_currentStepIndex == _tutorial!.steps.length - 1)
             Expanded(
               child: ElevatedButton.icon(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                icon: const Icon(Icons.check_circle),
-                label: const Text('Complete'),
+                onPressed: () => _showQuiz(),
+                icon: const Icon(Icons.quiz),
+                label: const Text('Take Quiz'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green,
                   foregroundColor: Colors.white,

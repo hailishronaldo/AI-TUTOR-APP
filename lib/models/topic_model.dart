@@ -50,6 +50,16 @@ class TutorialStep {
       explanation: json['explanation'] as String?,
     );
   }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'stepNumber': stepNumber,
+      'title': title,
+      'content': content,
+      'codeExample': codeExample,
+      'explanation': explanation,
+    };
+  }
 }
 
 @immutable

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:ui';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../main.dart';
 import '../services/ai_service.dart';
+import '../services/supabase_service.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key});
@@ -14,6 +16,36 @@ class _ChatScreenState extends State<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final List<ChatMessage> _messages = <ChatMessage>[];
   bool _isSending = false;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadChatHistory();
+  }
+
+  Future<void> _loadChatHistory() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        final chatData = await supabaseService.getChatMessages(user.uid);
+        setState(() {
+          _messages.clear();
+          _messages.addAll(
+            chatData.map((msg) => ChatMessage(
+              role: msg['role'] as String,
+              content: msg['content'] as String,
+            )),
+          );
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
+    } catch (e) {
+      setState(() => _isLoading = false);
+    }
+  }
 
   @override
   void dispose() {
@@ -76,6 +108,12 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _buildChatList() {
+    if (_isLoading) {
+      return const Center(
+        child: CircularProgressIndicator(color: kPrimaryColor),
+      );
+    }
+
     if (_messages.isEmpty) {
       return Center(
         child: Padding(
@@ -204,16 +242,36 @@ class _ChatScreenState extends State<ChatScreen> {
   Future<void> _handleSend() async {
     final text = _messageController.text.trim();
     if (text.isEmpty) return;
+
+    final user = FirebaseAuth.instance.currentUser;
+
     setState(() {
       _messages.add(ChatMessage(role: 'user', content: text));
       _isSending = true;
       _messageController.clear();
     });
+
+    if (user != null) {
+      await supabaseService.saveChatMessage(
+        userId: user.uid,
+        role: 'user',
+        content: text,
+      );
+    }
+
     try {
       final reply = await aiService.sendChatResponse(_messages);
       setState(() {
         _messages.add(ChatMessage(role: 'assistant', content: reply));
       });
+
+      if (user != null) {
+        await supabaseService.saveChatMessage(
+          userId: user.uid,
+          role: 'assistant',
+          content: reply,
+        );
+      }
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(

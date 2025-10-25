@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../main.dart';
 import 'auth_screen.dart';
+import 'home_screen.dart';
 import '../widgets/onboarding_ui_component.dart';
+import '../services/supabase_service.dart';
 
 // 🧭 ONBOARDING
 class OnboardingScreen extends StatefulWidget {
@@ -35,17 +38,39 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   ];
 
   Future<void> _completeOnboarding() async {
-    // COMMENTED OUT: Saving onboarding complete status
-    // Uncomment to enable persistent onboarding completion tracking
-    /*
-    */
     final SharedPreferences prefs = await SharedPreferences.getInstance();
     await prefs.setBool(onboarding_complete_v2, true);
 
     if (!mounted) return;
-    Navigator.of(
-      context,
-    ).pushReplacement(MaterialPageRoute(builder: (_) => const AuthScreen()));
+    Navigator.of(context).pushReplacement(
+      MaterialPageRoute(builder: (_) => const AuthScreen()),
+    );
+  }
+
+  Future<void> _skipToHome() async {
+    try {
+      final userCredential = await FirebaseAuth.instance.signInAnonymously();
+      final user = userCredential.user;
+
+      if (user != null) {
+        await supabaseService.createOrUpdateUserProfile(
+          user.uid,
+          email: null,
+          displayName: 'Anonymous User',
+          isAnonymous: true,
+        );
+
+        if (!mounted) return;
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
+      }
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to sign in: $e')),
+      );
+    }
   }
 
   void _goNext() {
@@ -88,7 +113,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     TextButton(
-                      onPressed: _completeOnboarding,
+                      onPressed: _skipToHome,
                       child: const Text(
                         'Skip',
                         style: TextStyle(color: Colors.white70),
