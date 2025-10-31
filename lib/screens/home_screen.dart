@@ -10,6 +10,8 @@ import '../models/topic_model.dart';
 import 'topic_detail_screen.dart';
 import '../services/visited_topics_service.dart';
 
+final _navIndexProvider = StateProvider<int>((ref) => 0);
+
 // 🏠 HOME
 class HomeScreen extends ConsumerStatefulWidget {
   const HomeScreen({super.key});
@@ -24,8 +26,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen>
     vsync: this,
     duration: kAnimationNormal,
   )..forward();
-
-  final StateProvider<int> _navIndexProvider = StateProvider<int>((ref) => 0);
 
   Future<void> _signOut(BuildContext context) async {
     await FirebaseAuth.instance.signOut();
